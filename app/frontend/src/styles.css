@@ -1,0 +1,287 @@
+:root {
+  --bg: #0f1b16;
+  --bg-soft: #142820;
+  --panel: rgba(14, 22, 19, 0.82);
+  --panel-strong: rgba(10, 16, 13, 0.92);
+  --line: rgba(165, 232, 180, 0.18);
+  --text: #edf7ec;
+  --muted: #92b19b;
+  --accent: #f6b93b;
+  --accent-soft: #fce5af;
+  --danger: #ff8f7a;
+  --ok: #96f0a9;
+  font-family: "Trebuchet MS", "Avenir Next", "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(246, 185, 59, 0.16), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(56, 150, 111, 0.26), transparent 32%),
+    linear-gradient(180deg, #11211b 0%, #09100e 100%);
+  color: var(--text);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.page {
+  position: relative;
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 48px 24px 64px;
+}
+
+.page__glow {
+  position: absolute;
+  inset: auto;
+  width: 320px;
+  height: 320px;
+  border-radius: 999px;
+  filter: blur(70px);
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.page__glow--one {
+  top: 24px;
+  right: 12%;
+  background: #f6b93b;
+}
+
+.page__glow--two {
+  left: 5%;
+  bottom: 10%;
+  background: #3fd0a2;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+  margin-bottom: 32px;
+}
+
+.hero h1 {
+  margin: 0;
+  max-width: 720px;
+  font-size: clamp(2.8rem, 5vw, 4.8rem);
+  line-height: 0.95;
+}
+
+.eyebrow,
+.hero__badge,
+.muted,
+.note,
+.status-pill,
+.download-link {
+  font-family: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+}
+
+.eyebrow {
+  color: var(--accent-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.78rem;
+}
+
+.hero__badge {
+  border: 1px solid var(--line);
+  padding: 10px 14px;
+  border-radius: 999px;
+  color: var(--ok);
+  background: rgba(19, 36, 29, 0.6);
+  white-space: nowrap;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(12px);
+}
+
+.card--form {
+  grid-row: span 2;
+}
+
+.card--status {
+  background: var(--panel-strong);
+}
+
+.status__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+textarea,
+select,
+input[type="range"] {
+  width: 100%;
+}
+
+textarea,
+select {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(17, 28, 23, 0.9);
+  color: var(--text);
+  padding: 14px 16px;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 220px;
+}
+
+label {
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.primary-button,
+.history-item,
+.download-link {
+  transition:
+    transform 120ms ease,
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.primary-button {
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f6b93b 0%, #ffd36f 100%);
+  color: #1f1a09;
+  padding: 14px 20px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.primary-button:hover:not(:disabled),
+.history-item:hover,
+.download-link:hover {
+  transform: translateY(-1px);
+}
+
+.note {
+  color: var(--accent-soft);
+}
+
+.error {
+  color: var(--danger);
+}
+
+.status-pill {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.status-pill--queued,
+.status-pill--validating,
+.status-pill--running,
+.status-pill--post_processing {
+  background: rgba(246, 185, 59, 0.14);
+  color: var(--accent-soft);
+}
+
+.status-pill--completed {
+  background: rgba(63, 208, 162, 0.14);
+  color: var(--ok);
+}
+
+.status-pill--failed {
+  background: rgba(255, 143, 122, 0.18);
+  color: var(--danger);
+}
+
+.audio-player {
+  width: 100%;
+  margin: 16px 0;
+}
+
+.download-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  padding: 12px 16px;
+  text-decoration: none;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-item {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(15, 26, 21, 0.82);
+  color: var(--text);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .hero,
+  .layout {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .hero {
+    gap: 18px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
