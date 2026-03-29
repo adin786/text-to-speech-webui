@@ -6,6 +6,10 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
+BACKEND_APP_DIR = Path(__file__).resolve().parent.parent
+BACKEND_DIR = BACKEND_APP_DIR.parent
+REPO_ROOT = BACKEND_DIR.parent.parent
+
 
 class Settings(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
@@ -15,11 +19,11 @@ class Settings(BaseModel):
     offline_mode: bool = True
     bind_host: str = "127.0.0.1"
     bind_port: int = 8000
-    model_root: Path = Path("runtime/models")
-    output_root: Path = Path("runtime/output")
-    jobs_root: Path = Path("runtime/data/jobs")
-    logs_root: Path = Path("runtime/logs")
-    frontend_dist: Path = Path("app/frontend/dist")
+    model_root: Path = REPO_ROOT / "runtime/models"
+    output_root: Path = REPO_ROOT / "runtime/output"
+    jobs_root: Path = REPO_ROOT / "runtime/data/jobs"
+    logs_root: Path = REPO_ROOT / "runtime/logs"
+    frontend_dist: Path = REPO_ROOT / "app/frontend/dist"
     default_model: str = "kokoro"
     enable_kokoro: bool = True
     enable_qwen: bool = True
