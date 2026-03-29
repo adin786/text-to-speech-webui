@@ -4,3 +4,4 @@ dist/
 runtime/
 *.pyc
 __pycache__/
+*.egg-info/
