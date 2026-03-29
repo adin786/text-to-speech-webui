@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -13,18 +12,12 @@ from app.core.config import get_settings
 from app.core.logging import configure_logging
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.logs_root)
     container = build_container(settings)
+    app = FastAPI(title=settings.app_title)
     app.state.container = container
-    yield
-
-
-def create_app() -> FastAPI:
-    settings = get_settings()
-    app = FastAPI(title=settings.app_title, lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,

@@ -36,6 +36,17 @@ cd app/backend
 uv run pytest
 ```
 
+## Kokoro setup
+
+Download the real Kokoro model files and the required English spaCy model:
+
+```bash
+cd app/backend
+UV_CACHE_DIR=/tmp/uv-cache uv run python ../../scripts/preload_models.py --root ../../runtime/models --model kokoro
+```
+
+After those files are present, the backend will automatically use real Kokoro inference for the `kokoro` model. It only falls back to demo synthesis when Kokoro assets are missing and `DEMO_MODE=true`.
+
 ## Demo offline prep
 
 ```bash
