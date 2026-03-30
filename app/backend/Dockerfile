@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 FROM python:3.10-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -14,10 +15,12 @@ RUN apt-get update \
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 COPY app/backend/pyproject.toml app/backend/uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
 
 COPY app/backend ./
-RUN uv sync --frozen --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
 ENV MODEL_ROOT=/workspace/runtime/models \
     OUTPUT_ROOT=/workspace/runtime/output \

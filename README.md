@@ -67,6 +67,7 @@ This starts:
 - `backend`: FastAPI on the internal Compose network, proxied by the frontend container at `/api`
 
 The default Compose stack is CPU-first and keeps Qwen disabled. Runtime data is mounted from the local `runtime/` directory.
+The backend Dockerfiles use BuildKit cache mounts for `uv`, so repeated image builds can reuse downloaded Python packages.
 
 ## Optional GPU Scaffold
 
