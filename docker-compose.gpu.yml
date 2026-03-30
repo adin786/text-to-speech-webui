@@ -1,0 +1,8 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: app/backend/Dockerfile.gpu
+    environment:
+      ENABLE_QWEN: "true"
+      QWEN_ENABLED_IN_UI: "true"

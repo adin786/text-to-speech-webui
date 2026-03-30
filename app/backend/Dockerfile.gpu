@@ -24,8 +24,8 @@ ENV MODEL_ROOT=/workspace/runtime/models \
     LOGS_ROOT=/workspace/runtime/logs \
     OFFLINE_MODE=true \
     DEMO_MODE=true \
-    ENABLE_QWEN=false \
-    QWEN_ENABLED_IN_UI=false
+    ENABLE_QWEN=true \
+    QWEN_ENABLED_IN_UI=true
 
 EXPOSE 8000
 

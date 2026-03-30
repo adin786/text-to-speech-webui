@@ -1,8 +1,14 @@
 .git
-.venv
-node_modules
+.gitignore
+
 runtime
+
 app/frontend/node_modules
 app/frontend/dist
+
 app/backend/.venv
-app/backend/tts_webui_backend.egg-info
+app/backend/__pycache__
+app/backend/.pytest_cache
+
+**/__pycache__
+**/.pytest_cache

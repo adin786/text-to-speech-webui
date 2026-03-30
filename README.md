@@ -58,7 +58,22 @@ This writes local model placeholder manifests under `runtime/models`. Replace th
 ## Docker
 
 ```bash
-docker compose -f deploy/compose/docker-compose.yml up --build
+docker compose up --build
 ```
 
-The container serves the built React frontend from the FastAPI backend on `http://127.0.0.1:8000`.
+This starts:
+
+- `frontend`: nginx serving the built React app on `http://127.0.0.1:3000`
+- `backend`: FastAPI on the internal Compose network, proxied by the frontend container at `/api`
+
+The default Compose stack is CPU-first and keeps Qwen disabled. Runtime data is mounted from the local `runtime/` directory.
+
+## Optional GPU Scaffold
+
+There is also an optional override file and separate backend Dockerfile reserved for a future GPU-oriented backend path:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+```
+
+That path is not the default deployment target and is intentionally separate from the main Kokoro CPU stack.

@@ -1,0 +1,39 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: app/backend/Dockerfile
+    environment:
+      APP_TITLE: Text to Speech WebUI
+      OFFLINE_MODE: "true"
+      DEMO_MODE: "true"
+      ENABLE_QWEN: "false"
+      QWEN_ENABLED_IN_UI: "false"
+      MODEL_ROOT: /workspace/runtime/models
+      OUTPUT_ROOT: /workspace/runtime/output
+      JOBS_ROOT: /workspace/runtime/data/jobs
+      LOGS_ROOT: /workspace/runtime/logs
+    expose:
+      - "8000"
+    volumes:
+      - ./runtime/models:/workspace/runtime/models
+      - ./runtime/output:/workspace/runtime/output
+      - ./runtime/data/jobs:/workspace/runtime/data/jobs
+      - ./runtime/logs:/workspace/runtime/logs
+    networks:
+      - webapp
+
+  frontend:
+    build:
+      context: .
+      dockerfile: app/frontend/Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:3000:80"
+    networks:
+      - webapp
+
+networks:
+  webapp:
+    driver: bridge
