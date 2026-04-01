@@ -9,7 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /workspace/app/backend
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ffmpeg ca-certificates \
+    && apt-get install -y --no-install-recommends curl ffmpeg ca-certificates sox \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
