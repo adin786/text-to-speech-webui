@@ -14,12 +14,18 @@ class AudioProcessor:
 
     def normalize_wav(self, wav_path: Path) -> Path:
         if not wav_path.exists():
-            raise RuntimeFailure("wav_missing", "The generated WAV file is missing.", status_code=500)
+            raise RuntimeFailure(
+                "wav_missing", "The generated WAV file is missing.", status_code=500
+            )
         return wav_path
 
     def encode_mp3(self, wav_path: Path, mp3_path: Path) -> None:
         if not shutil.which(self.ffmpeg_binary):
-            raise RuntimeFailure("ffmpeg_missing", "ffmpeg is required to encode MP3 output.", status_code=500)
+            raise RuntimeFailure(
+                "ffmpeg_missing",
+                "ffmpeg is required to encode MP3 output.",
+                status_code=500,
+            )
         mp3_path.parent.mkdir(parents=True, exist_ok=True)
         result = subprocess.run(
             [
@@ -38,4 +44,8 @@ class AudioProcessor:
             check=False,
         )
         if result.returncode != 0:
-            raise RuntimeFailure("ffmpeg_failed", result.stderr.strip() or "ffmpeg failed.", status_code=500)
+            raise RuntimeFailure(
+                "ffmpeg_failed",
+                result.stderr.strip() or "ffmpeg failed.",
+                status_code=500,
+            )

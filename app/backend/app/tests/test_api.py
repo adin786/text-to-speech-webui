@@ -38,7 +38,9 @@ def test_health_endpoint() -> None:
     async def run() -> None:
         app = create_app()
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
             response = await client.get("/api/health")
             assert response.status_code == 200
             assert response.json() == {"status": "ok"}
@@ -50,10 +52,17 @@ def test_job_generation_flow() -> None:
     async def run() -> None:
         app = create_app()
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
             create = await client.post(
                 "/api/jobs",
-                json={"text": "Hello world", "model": "kokoro", "speed": 1.0, "output_format": "mp3"},
+                json={
+                    "text": "Hello world",
+                    "model": "kokoro",
+                    "speed": 1.0,
+                    "output_format": "mp3",
+                },
             )
             assert create.status_code == 200
             payload = create.json()
@@ -67,31 +76,42 @@ def test_job_generation_flow() -> None:
     asyncio.run(run())
 
 
-def test_models_endpoint_marks_qwen_unavailable_without_model_dir() -> None:
+def test_models_endpoint_keeps_qwen_available_in_demo_mode() -> None:
     async def run() -> None:
         app = create_app()
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
             response = await client.get("/api/models")
             assert response.status_code == 200
             models = {model["id"]: model for model in response.json()["models"]}
             assert models["kokoro"]["available"] is True
-            assert models["qwen3_0_6b"]["available"] is False
+            assert models["qwen3_0_6b"]["available"] is True
 
     asyncio.run(run())
 
 
-def test_create_job_returns_useful_error_when_model_assets_are_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_create_job_returns_useful_error_when_model_assets_are_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("DEMO_MODE", "false")
     get_settings.cache_clear()
 
     async def run() -> None:
         app = create_app()
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
             response = await client.post(
                 "/api/jobs",
-                json={"text": "Hello world", "model": "kokoro", "speed": 1.0, "output_format": "mp3"},
+                json={
+                    "text": "Hello world",
+                    "model": "kokoro",
+                    "speed": 1.0,
+                    "output_format": "mp3",
+                },
             )
             assert response.status_code == 409
             assert response.json()["detail"]["error_code"] == "model_unavailable"

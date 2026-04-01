@@ -8,7 +8,12 @@ from threading import Lock
 from app.adapters.tts.base import TTSBackend
 from app.adapters.tts.demo import synthesize_demo_wave
 from app.domain.errors import AvailabilityError, RuntimeFailure
-from app.domain.models import BackendSynthesisOutput, ModelId, SynthesisJob, VoiceDescriptor
+from app.domain.models import (
+    BackendSynthesisOutput,
+    ModelId,
+    SynthesisJob,
+    VoiceDescriptor,
+)
 
 VOICE_OPTIONS = [
     VoiceDescriptor(id="af_alloy", display_name="Alloy"),
@@ -70,7 +75,10 @@ class KokoroBackend(TTSBackend):
         )
         return BackendSynthesisOutput(
             wav_path=output,
-            metadata={"backend": "kokoro", "mode": "demo" if self.settings.demo_mode else "local"},
+            metadata={
+                "backend": "kokoro",
+                "mode": "demo" if self.settings.demo_mode else "local",
+            },
         )
 
     def _synthesize_real(self, job: SynthesisJob) -> BackendSynthesisOutput:
@@ -84,15 +92,21 @@ class KokoroBackend(TTSBackend):
         output.parent.mkdir(parents=True, exist_ok=True)
 
         chunks = []
-        for result in pipeline(job.request.text, voice=voice_pack, speed=job.request.speed, model=model):
+        for result in pipeline(
+            job.request.text, voice=voice_pack, speed=job.request.speed, model=model
+        ):
             if result.audio is None:
                 continue
             chunks.append(result.audio.numpy())
 
         if not chunks:
-            raise RuntimeFailure("kokoro_empty_output", "Kokoro did not generate audio.", status_code=500)
+            raise RuntimeFailure(
+                "kokoro_empty_output", "Kokoro did not generate audio.", status_code=500
+            )
 
-        waveform = chunks[0] if len(chunks) == 1 else __import__("numpy").concatenate(chunks)
+        waveform = (
+            chunks[0] if len(chunks) == 1 else __import__("numpy").concatenate(chunks)
+        )
         sf.write(output, waveform, 24_000)
         return BackendSynthesisOutput(
             wav_path=output,
@@ -115,7 +129,11 @@ class KokoroBackend(TTSBackend):
         return all(path.exists() for path in required_paths)
 
     def _voice_path(self, voice_id: str) -> Path:
-        return self.model_store.model_dir(self.settings.kokoro_model_dir_name) / "voices" / f"{voice_id}.pt"
+        return (
+            self.model_store.model_dir(self.settings.kokoro_model_dir_name)
+            / "voices"
+            / f"{voice_id}.pt"
+        )
 
     def _get_model(self):
         if self._model is None:
@@ -123,12 +141,18 @@ class KokoroBackend(TTSBackend):
                 if self._model is None:
                     from kokoro import KModel
 
-                    model_dir = self.model_store.model_dir(self.settings.kokoro_model_dir_name)
-                    self._model = KModel(
-                        repo_id="hexgrad/Kokoro-82M",
-                        config=str(model_dir / "config.json"),
-                        model=str(model_dir / "kokoro-v1_0.pth"),
-                    ).to("cpu").eval()
+                    model_dir = self.model_store.model_dir(
+                        self.settings.kokoro_model_dir_name
+                    )
+                    self._model = (
+                        KModel(
+                            repo_id="hexgrad/Kokoro-82M",
+                            config=str(model_dir / "config.json"),
+                            model=str(model_dir / "kokoro-v1_0.pth"),
+                        )
+                        .to("cpu")
+                        .eval()
+                    )
         return self._model
 
     def _get_pipeline(self):

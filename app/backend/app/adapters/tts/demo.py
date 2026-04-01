@@ -6,7 +6,9 @@ import wave
 from pathlib import Path
 
 
-def synthesize_demo_wave(text: str, destination: Path, base_frequency: int = 220, speed: float = 1.0) -> None:
+def synthesize_demo_wave(
+    text: str, destination: Path, base_frequency: int = 220, speed: float = 1.0
+) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     sample_rate = 24_000
     frames: list[int] = []
@@ -20,7 +22,11 @@ def synthesize_demo_wave(text: str, destination: Path, base_frequency: int = 220
         total_samples = int(sample_rate * duration)
         for position in range(total_samples):
             envelope = min(position / 400, 1) * min((total_samples - position) / 400, 1)
-            sample = int(amplitude * envelope * math.sin(2 * math.pi * frequency * position / sample_rate))
+            sample = int(
+                amplitude
+                * envelope
+                * math.sin(2 * math.pi * frequency * position / sample_rate)
+            )
             frames.append(sample)
         pause_samples = int(sample_rate * 0.01)
         frames.extend([0] * pause_samples)

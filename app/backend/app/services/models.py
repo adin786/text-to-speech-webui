@@ -21,7 +21,13 @@ class ModelRegistryService:
         backend = self.backends[model_id]
         descriptor = backend.describe()
         if not descriptor.enabled:
-            raise AvailabilityError("model_disabled", f"Model {model_id} is disabled.", status_code=400)
+            raise AvailabilityError(
+                "model_disabled", f"Model {model_id} is disabled.", status_code=400
+            )
         if not descriptor.available:
-            raise AvailabilityError("model_unavailable", descriptor.notes or f"Model {model_id} is unavailable.", status_code=409)
+            raise AvailabilityError(
+                "model_unavailable",
+                descriptor.notes or f"Model {model_id} is unavailable.",
+                status_code=409,
+            )
         return backend

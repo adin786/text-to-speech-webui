@@ -51,7 +51,10 @@ class JobService:
 
     def create_job(self, request: SynthesisRequest) -> SynthesisJob:
         if len(request.text) > self.config.max_input_length:
-            raise ValidationError("text_too_long", f"Text must be <= {self.config.max_input_length} characters.")
+            raise ValidationError(
+                "text_too_long",
+                f"Text must be <= {self.config.max_input_length} characters.",
+            )
         self.model_registry.require_backend(request.model)
         job = SynthesisJob(request=request)
         self.job_store.save_job(job)
@@ -76,16 +79,24 @@ class JobService:
     def get_job(self, job_id: str) -> SynthesisJob:
         job = self.job_store.get_job(job_id)
         if not job:
-            raise NotFoundError("job_not_found", f"Job {job_id} was not found.", status_code=404)
+            raise NotFoundError(
+                "job_not_found", f"Job {job_id} was not found.", status_code=404
+            )
         return job
 
     def get_artifact_path(self, job_id: str, kind: str) -> Path:
         job = self.get_job(job_id)
         if not job.artifact:
-            raise NotFoundError("artifact_not_found", f"Job {job_id} has no generated artifact.", status_code=404)
+            raise NotFoundError(
+                "artifact_not_found",
+                f"Job {job_id} has no generated artifact.",
+                status_code=404,
+            )
         if kind == "audio":
             return job.artifact.mp3_path
-        raise NotFoundError("artifact_not_found", "Unsupported artifact.", status_code=404)
+        raise NotFoundError(
+            "artifact_not_found", "Unsupported artifact.", status_code=404
+        )
 
     def _worker_loop(self) -> None:
         while True:
@@ -101,7 +112,9 @@ class JobService:
             job.transition(JobStatus.VALIDATING, "Validating request")
             self.job_store.save_job(job)
             backend = self.model_registry.require_backend(job.request.model)
-            job.transition(JobStatus.RUNNING, f"Generating audio with {job.request.model.value}")
+            job.transition(
+                JobStatus.RUNNING, f"Generating audio with {job.request.model.value}"
+            )
             self.job_store.save_job(job)
             wav_output = backend.synthesize_to_wav(job)
             job.transition(JobStatus.POST_PROCESSING, "Encoding MP3")
@@ -132,7 +145,9 @@ class JobService:
             self.job_store.save_job(job)
             logger.exception("unexpected_job_failure", extra={"job_id": job.job_id})
 
-    def _finalize_artifacts(self, job: SynthesisJob, backend_output: BackendSynthesisOutput) -> SynthesisResult:
+    def _finalize_artifacts(
+        self, job: SynthesisJob, backend_output: BackendSynthesisOutput
+    ) -> SynthesisResult:
         mp3_path = self.artifact_store.allocate_mp3_path(job.job_id)
         wav_path = self.audio_processor.normalize_wav(backend_output.wav_path)
         self.audio_processor.encode_mp3(wav_path, mp3_path)

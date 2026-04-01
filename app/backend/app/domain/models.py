@@ -115,7 +115,9 @@ class SynthesisJob(BaseModel):
 
     def transition(self, status: JobStatus, message: str) -> None:
         if self.status in {JobStatus.COMPLETED, JobStatus.FAILED}:
-            raise ValidationError("invalid_transition", "Completed jobs cannot transition again.")
+            raise ValidationError(
+                "invalid_transition", "Completed jobs cannot transition again."
+            )
         self.status = status
         self.progress_message = message
         self.updated_at = utcnow()

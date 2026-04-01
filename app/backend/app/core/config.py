@@ -37,7 +37,9 @@ class Settings(BaseModel):
     demo_mode: bool = True
     qwen_model_dir_name: str = "qwen3_0_6b"
     kokoro_model_dir_name: str = "kokoro"
-    allowed_origins: list[str] = Field(default_factory=lambda: ["http://127.0.0.1:5173", "http://localhost:5173"])
+    allowed_origins: list[str] = Field(
+        default_factory=lambda: ["http://127.0.0.1:5173", "http://localhost:5173"]
+    )
 
     @property
     def runtime_roots(self) -> list[Path]:
@@ -51,26 +53,56 @@ def get_settings() -> Settings:
         api_prefix=os.getenv("API_PREFIX", Settings.model_fields["api_prefix"].default),
         offline_mode=os.getenv("OFFLINE_MODE", "true").lower() == "true",
         bind_host=os.getenv("BIND_HOST", Settings.model_fields["bind_host"].default),
-        bind_port=int(os.getenv("BIND_PORT", Settings.model_fields["bind_port"].default)),
-        model_root=Path(os.getenv("MODEL_ROOT", str(Settings.model_fields["model_root"].default))),
-        output_root=Path(os.getenv("OUTPUT_ROOT", str(Settings.model_fields["output_root"].default))),
-        jobs_root=Path(os.getenv("JOBS_ROOT", str(Settings.model_fields["jobs_root"].default))),
-        logs_root=Path(os.getenv("LOGS_ROOT", str(Settings.model_fields["logs_root"].default))),
-        frontend_dist=Path(os.getenv("FRONTEND_DIST", str(Settings.model_fields["frontend_dist"].default))),
-        default_model=os.getenv("DEFAULT_MODEL", Settings.model_fields["default_model"].default),
+        bind_port=int(
+            os.getenv("BIND_PORT", Settings.model_fields["bind_port"].default)
+        ),
+        model_root=Path(
+            os.getenv("MODEL_ROOT", str(Settings.model_fields["model_root"].default))
+        ),
+        output_root=Path(
+            os.getenv("OUTPUT_ROOT", str(Settings.model_fields["output_root"].default))
+        ),
+        jobs_root=Path(
+            os.getenv("JOBS_ROOT", str(Settings.model_fields["jobs_root"].default))
+        ),
+        logs_root=Path(
+            os.getenv("LOGS_ROOT", str(Settings.model_fields["logs_root"].default))
+        ),
+        frontend_dist=Path(
+            os.getenv(
+                "FRONTEND_DIST", str(Settings.model_fields["frontend_dist"].default)
+            )
+        ),
+        default_model=os.getenv(
+            "DEFAULT_MODEL", Settings.model_fields["default_model"].default
+        ),
         enable_kokoro=os.getenv("ENABLE_KOKORO", "true").lower() == "true",
         enable_qwen=os.getenv("ENABLE_QWEN", "true").lower() == "true",
-        max_input_length=int(os.getenv("MAX_INPUT_LENGTH", Settings.model_fields["max_input_length"].default)),
-        ffmpeg_binary=os.getenv("FFMPEG_BINARY", Settings.model_fields["ffmpeg_binary"].default),
+        max_input_length=int(
+            os.getenv(
+                "MAX_INPUT_LENGTH", Settings.model_fields["max_input_length"].default
+            )
+        ),
+        ffmpeg_binary=os.getenv(
+            "FFMPEG_BINARY", Settings.model_fields["ffmpeg_binary"].default
+        ),
         job_timeout_seconds=int(
-            os.getenv("JOB_TIMEOUT_SECONDS", Settings.model_fields["job_timeout_seconds"].default),
+            os.getenv(
+                "JOB_TIMEOUT_SECONDS",
+                Settings.model_fields["job_timeout_seconds"].default,
+            ),
         ),
         preserve_wav=os.getenv("PRESERVE_WAV", "false").lower() == "true",
         keep_history_limit=int(
-            os.getenv("KEEP_HISTORY_LIMIT", Settings.model_fields["keep_history_limit"].default),
+            os.getenv(
+                "KEEP_HISTORY_LIMIT",
+                Settings.model_fields["keep_history_limit"].default,
+            ),
         ),
         qwen_enabled_in_ui=os.getenv("QWEN_ENABLED_IN_UI", "true").lower() == "true",
-        environment=os.getenv("ENVIRONMENT", Settings.model_fields["environment"].default),
+        environment=os.getenv(
+            "ENVIRONMENT", Settings.model_fields["environment"].default
+        ),
         demo_mode=os.getenv("DEMO_MODE", "true").lower() == "true",
         qwen_model_dir_name=os.getenv(
             "QWEN_MODEL_DIR_NAME",

@@ -10,5 +10,5 @@ models_root="$repo_root/runtime/models"
 
 cd "$backend_dir"
 uv python install 3.11
-uv sync --python 3.11 --extra kokoro --extra cpu
-uv run --python 3.11 python ../../scripts/preload_models.py --root "$models_root" --model kokoro
+uv sync --python 3.11 --extra qwen --extra cpu
+uv run --python 3.11 python ../../scripts/preload_models.py --root "$models_root" --model qwen3_0_6b

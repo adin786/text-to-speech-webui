@@ -36,7 +36,9 @@ class JobStore:
     def save_job(self, job: SynthesisJob) -> None:
         path = self._path(job.job_id)
         path.parent.mkdir(parents=True, exist_ok=True)
-        with NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, delete=False) as handle:
+        with NamedTemporaryFile(
+            "w", encoding="utf-8", dir=path.parent, delete=False
+        ) as handle:
             handle.write(job.model_dump_json(indent=2, exclude_none=True))
             temp_path = Path(handle.name)
         temp_path.replace(path)
@@ -50,7 +52,11 @@ class JobStore:
 
     def list_jobs(self, limit: int) -> list[SynthesisJob]:
         jobs = []
-        for path in sorted(self.root.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True):
+        for path in sorted(
+            self.root.glob("*.json"),
+            key=lambda item: item.stat().st_mtime,
+            reverse=True,
+        ):
             payload = json.loads(path.read_text(encoding="utf-8"))
             jobs.append(SynthesisJob.model_validate(payload))
         return jobs[:limit]

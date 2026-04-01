@@ -6,9 +6,9 @@ services:
     environment:
       APP_TITLE: Text to Speech WebUI
       OFFLINE_MODE: "true"
-      DEMO_MODE: "true"
-      ENABLE_QWEN: "false"
-      QWEN_ENABLED_IN_UI: "false"
+      DEMO_MODE: "false"
+      ENABLE_QWEN: "true"
+      QWEN_ENABLED_IN_UI: "true"
       MODEL_ROOT: /workspace/runtime/models
       OUTPUT_ROOT: /workspace/runtime/output
       JOBS_ROOT: /workspace/runtime/data/jobs

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM python:3.10-slim AS runtime
+FROM python:3.11-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -16,20 +16,20 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 COPY app/backend/pyproject.toml app/backend/uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-install-project --extra kokoro --extra cpu
+    uv sync --frozen --no-dev --no-install-project --extra kokoro --extra qwen --extra cpu
 
 COPY app/backend ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --extra kokoro --extra cpu
+    uv sync --frozen --no-dev --extra kokoro --extra qwen --extra cpu
 
 ENV MODEL_ROOT=/workspace/runtime/models \
     OUTPUT_ROOT=/workspace/runtime/output \
     JOBS_ROOT=/workspace/runtime/data/jobs \
     LOGS_ROOT=/workspace/runtime/logs \
     OFFLINE_MODE=true \
-    DEMO_MODE=true \
-    ENABLE_QWEN=false \
-    QWEN_ENABLED_IN_UI=false
+    DEMO_MODE=false \
+    ENABLE_QWEN=true \
+    QWEN_ENABLED_IN_UI=true
 
 EXPOSE 8000
 

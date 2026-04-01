@@ -5,7 +5,13 @@ from pathlib import Path
 
 from app.adapters.storage.filesystem import ModelStore
 from app.core.config import Settings
-from app.domain.models import BackendSynthesisOutput, ModelDescriptor, ModelId, SynthesisJob, VoiceDescriptor
+from app.domain.models import (
+    BackendSynthesisOutput,
+    ModelDescriptor,
+    ModelId,
+    SynthesisJob,
+    VoiceDescriptor,
+)
 
 
 class TTSBackend(ABC):

@@ -3,7 +3,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 
-from app.api.schemas import ConfigResponse, JobCreatedResponse, JobStatusResponse, ModelsResponse
+from app.api.schemas import (
+    ConfigResponse,
+    JobCreatedResponse,
+    JobStatusResponse,
+    ModelsResponse,
+)
 from app.core.dependencies import get_container
 from app.domain.errors import AppError
 from app.domain.models import SynthesisRequest
@@ -12,7 +17,10 @@ router = APIRouter()
 
 
 def raise_http(exc: AppError) -> None:
-    raise HTTPException(status_code=exc.status_code, detail={"error_code": exc.error_code, "message": exc.message})
+    raise HTTPException(
+        status_code=exc.status_code,
+        detail={"error_code": exc.error_code, "message": exc.message},
+    )
 
 
 @router.get("/health")
@@ -41,10 +49,14 @@ def list_jobs(container=Depends(get_container)) -> list[dict]:
 
 
 @router.post("/jobs", response_model=JobCreatedResponse)
-def create_job(request: SynthesisRequest, container=Depends(get_container)) -> JobCreatedResponse:
+def create_job(
+    request: SynthesisRequest, container=Depends(get_container)
+) -> JobCreatedResponse:
     try:
         job = container.job_service.create_job(request)
-        return JobCreatedResponse(job_id=job.job_id, status=job.status, created_at=job.created_at)
+        return JobCreatedResponse(
+            job_id=job.job_id, status=job.status, created_at=job.created_at
+        )
     except AppError as exc:
         raise_http(exc)
 
@@ -60,7 +72,10 @@ def get_job(job_id: str, container=Depends(get_container)) -> JobStatusResponse:
 @router.get("/jobs/{job_id}/audio")
 def get_audio(job_id: str, container=Depends(get_container)) -> FileResponse:
     try:
-        return FileResponse(container.job_service.get_artifact_path(job_id, "audio"), media_type="audio/mpeg")
+        return FileResponse(
+            container.job_service.get_artifact_path(job_id, "audio"),
+            media_type="audio/mpeg",
+        )
     except AppError as exc:
         raise_http(exc)
 
