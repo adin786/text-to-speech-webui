@@ -10,7 +10,7 @@ const defaultForm = {
   output_format: "mp3",
 };
 
-function usePollingJob(jobId, onUpdate) {
+function usePollingJob(jobId, onUpdate, onError) {
   useEffect(() => {
     if (!jobId) {
       return undefined;
@@ -18,13 +18,21 @@ function usePollingJob(jobId, onUpdate) {
 
     let active = true;
     const timer = setInterval(async () => {
-      const next = await fetchJob(jobId);
-      if (!active) {
-        return;
-      }
-      onUpdate(next);
-      if (next.status === "completed" || next.status === "failed") {
+      try {
+        const next = await fetchJob(jobId);
+        if (!active) {
+          return;
+        }
+        onUpdate(next);
+        if (next.status === "completed" || next.status === "failed") {
+          clearInterval(timer);
+        }
+      } catch (nextError) {
         clearInterval(timer);
+        if (!active) {
+          return;
+        }
+        onError(nextError);
       }
     }, 1000);
 
@@ -32,7 +40,7 @@ function usePollingJob(jobId, onUpdate) {
       active = false;
       clearInterval(timer);
     };
-  }, [jobId, onUpdate]);
+  }, [jobId, onError, onUpdate]);
 }
 
 function AppShell({ children, badge }) {
@@ -185,13 +193,19 @@ export default function App() {
     setForm((current) => ({ ...current, voice: nextVoice, language: selectedModel.languages[0] ?? "en" }));
   }, [selectedModel?.id]);
 
-  usePollingJob(job?.job_id, async (nextJob) => {
-    setJob(nextJob);
-    if (nextJob.status === "completed" || nextJob.status === "failed") {
-      const jobs = await fetchJobs();
-      setHistory(jobs);
-    }
-  });
+  usePollingJob(
+    job?.job_id,
+    async (nextJob) => {
+      setJob(nextJob);
+      if (nextJob.status === "completed" || nextJob.status === "failed") {
+        const jobs = await fetchJobs();
+        setHistory(jobs);
+      }
+    },
+    (nextError) => {
+      setError(nextError.message);
+    },
+  );
 
   const isInvalid = !form.text.trim() || !selectedModel?.available;
 
@@ -213,8 +227,13 @@ export default function App() {
   }
 
   async function handleSelectJob(jobId) {
-    const nextJob = await fetchJob(jobId);
-    setJob(nextJob);
+    try {
+      const nextJob = await fetchJob(jobId);
+      setJob(nextJob);
+      setError("");
+    } catch (nextError) {
+      setError(nextError.message);
+    }
   }
 
   return (

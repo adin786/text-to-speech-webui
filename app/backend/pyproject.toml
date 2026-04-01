@@ -9,19 +9,51 @@ description = "Local-first text-to-speech web application backend"
 requires-python = ">=3.10"
 dependencies = [
   "fastapi>=0.115.0",
-  "huggingface-hub>=1.8.0",
-  "kokoro>=0.9.4",
-  "numpy>=2.2.6",
   "pydantic>=2.9.0",
-  "soundfile>=0.13.1",
   "uvicorn>=0.30.0",
 ]
 
 [project.optional-dependencies]
+kokoro = [
+  "huggingface-hub>=1.8.0",
+  "kokoro>=0.9.4",
+  "numpy>=2.2.6",
+  "soundfile>=0.13.1",
+]
+cpu = [
+  "torch>=2.11.0",
+]
+gpu = [
+  "torch>=2.11.0",
+]
 dev = [
   "httpx>=0.27.0",
   "pytest>=8.0.0",
 ]
+
+[tool.uv]
+conflicts = [
+  [
+    { extra = "cpu" },
+    { extra = "gpu" },
+  ],
+]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", extra = "cpu" },
+  { index = "pytorch-cu128", extra = "gpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
 
 [tool.setuptools]
 packages = ["app"]

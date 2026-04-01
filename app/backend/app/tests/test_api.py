@@ -79,3 +79,25 @@ def test_models_endpoint_marks_qwen_unavailable_without_model_dir() -> None:
             assert models["qwen3_0_6b"]["available"] is False
 
     asyncio.run(run())
+
+
+def test_create_job_returns_useful_error_when_model_assets_are_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DEMO_MODE", "false")
+    get_settings.cache_clear()
+
+    async def run() -> None:
+        app = create_app()
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            response = await client.post(
+                "/api/jobs",
+                json={"text": "Hello world", "model": "kokoro", "speed": 1.0, "output_format": "mp3"},
+            )
+            assert response.status_code == 409
+            assert response.json()["detail"]["error_code"] == "model_unavailable"
+            assert "missing" in response.json()["detail"]["message"].lower()
+
+    try:
+        asyncio.run(run())
+    finally:
+        get_settings.cache_clear()

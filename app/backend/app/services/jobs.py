@@ -52,6 +52,7 @@ class JobService:
     def create_job(self, request: SynthesisRequest) -> SynthesisJob:
         if len(request.text) > self.config.max_input_length:
             raise ValidationError("text_too_long", f"Text must be <= {self.config.max_input_length} characters.")
+        self.model_registry.require_backend(request.model)
         job = SynthesisJob(request=request)
         self.job_store.save_job(job)
         self.queue.put(job.job_id)
