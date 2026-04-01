@@ -14,13 +14,11 @@ RUN apt-get update \
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-COPY app/backend/pyproject.toml app/backend/uv.lock ./
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-install-project
-
 COPY app/backend ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+    uv pip install --system --index-url https://download.pytorch.org/whl/cpu "torch==2.11.0+cpu"
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system .
 
 ENV MODEL_ROOT=/workspace/runtime/models \
     OUTPUT_ROOT=/workspace/runtime/output \
@@ -33,4 +31,4 @@ ENV MODEL_ROOT=/workspace/runtime/models \
 
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
