@@ -78,13 +78,25 @@ After those files are present, the backend will automatically use real Kokoro in
 
 ## Qwen setup
 
-Download the Qwen3-TTS 0.6B custom-voice checkpoint for local CPU inference:
+Download the Qwen3-TTS 0.6B checkpoints for both built-in named voices and saved voice cloning:
 
 ```bash
 ./scripts/download_qwen.sh
 ```
 
-The default Compose stack now includes the Qwen CPU runtime. Once the model files are present under `runtime/models/qwen3_0_6b`, the backend will use real Qwen inference offline instead of demo synthesis.
+The default Compose stack now includes the Qwen CPU runtime. The script downloads:
+
+- `runtime/models/qwen3_0_6b` for built-in named voices
+- `runtime/models/qwen3_0_6b_base` for saved voice cloning
+
+Once those directories are present, the backend can run both normal Qwen voice generation and saved voice cloning offline.
+
+Voice cloning workflow:
+
+1. Open the app and go to the Voice Lab panel.
+2. Record or import a short single-speaker reference clip.
+3. Enter the exact transcript for that recording.
+4. Save the sample, then select `Qwen3-TTS 0.6B` with `Saved cloned voices` in the generation form.
 
 The default Docker stack now runs with `DEMO_MODE=false`, so missing model assets or missing optional runtimes surface as explicit errors instead of silently falling back to the demo tone.
 

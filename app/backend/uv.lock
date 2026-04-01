@@ -3820,6 +3820,7 @@ source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "pydantic" },
+    { name = "python-multipart" },
     { name = "uvicorn" },
 ]
 
@@ -3860,6 +3861,7 @@ requires-dist = [
     { name = "numpy", marker = "extra == 'kokoro'", specifier = ">=2.2.6" },
     { name = "pydantic", specifier = ">=2.9.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
+    { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "qwen-tts", marker = "extra == 'qwen'" },
     { name = "soundfile", marker = "extra == 'kokoro'", specifier = ">=0.13.1" },
     { name = "soundfile", marker = "extra == 'qwen'", specifier = ">=0.13.1" },

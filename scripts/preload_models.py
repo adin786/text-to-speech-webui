@@ -16,7 +16,8 @@ KOKORO_FILES = [
     "voices/bf_emma.pt",
 ]
 
-QWEN_REPO_ID = "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"
+QWEN_CUSTOM_REPO_ID = "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"
+QWEN_BASE_REPO_ID = "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
 QWEN_FILES = [
     "config.json",
     "generation_config.json",
@@ -66,14 +67,14 @@ def ensure_spacy_model() -> None:
     )
 
 
-def download_qwen(model_dir: Path) -> None:
+def download_qwen_repo(model_dir: Path, repo_id: str) -> None:
     from huggingface_hub import hf_hub_download
 
     for filename in QWEN_FILES:
         destination = model_dir / filename
         destination.parent.mkdir(parents=True, exist_ok=True)
         hf_hub_download(
-            repo_id=QWEN_REPO_ID,
+            repo_id=repo_id,
             filename=filename,
             local_dir=str(model_dir),
         )
@@ -112,7 +113,10 @@ def main() -> None:
             download_kokoro(model_dir)
             continue
         if not args.demo and model == "qwen3_0_6b":
-            download_qwen(model_dir)
+            download_qwen_repo(model_dir, QWEN_CUSTOM_REPO_ID)
+            clone_model_dir = root / "qwen3_0_6b_base"
+            clone_model_dir.mkdir(parents=True, exist_ok=True)
+            download_qwen_repo(clone_model_dir, QWEN_BASE_REPO_ID)
             continue
         manifest = {
             "model": model,

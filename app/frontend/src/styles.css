@@ -149,12 +149,14 @@ textarea {
 
 textarea,
 select,
+.field input:not([type="range"]):not([type="file"]),
 input[type="range"] {
   width: 100%;
 }
 
 textarea,
-select {
+select,
+.field input:not([type="range"]):not([type="file"]) {
   border: 1px solid var(--line);
   border-radius: 18px;
   background: rgba(17, 28, 23, 0.9);
@@ -173,6 +175,8 @@ label {
 }
 
 .primary-button,
+.secondary-button,
+.segment,
 .history-item,
 .download-link {
   transition:
@@ -197,6 +201,8 @@ label {
 }
 
 .primary-button:hover:not(:disabled),
+.secondary-button:hover:not(:disabled),
+.segment:hover:not(:disabled),
 .history-item:hover,
 .download-link:hover {
   transform: translateY(-1px);
@@ -256,6 +262,124 @@ label {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.guide {
+  margin-bottom: 22px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(14, 23, 19, 0.64);
+}
+
+.guide-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
+.guide-list li + li {
+  margin-top: 8px;
+}
+
+.segmented-control,
+.voice-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.segment,
+.secondary-button,
+.upload-button,
+.text-button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(15, 26, 21, 0.82);
+  color: var(--text);
+  padding: 12px 16px;
+}
+
+.segment,
+.secondary-button,
+.text-button {
+  cursor: pointer;
+}
+
+.segment.is-active {
+  background: rgba(246, 185, 59, 0.18);
+  border-color: rgba(246, 185, 59, 0.45);
+  color: var(--accent-soft);
+}
+
+.secondary-button--danger {
+  color: var(--danger);
+}
+
+.upload-button {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.upload-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.text-button {
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-soft);
+}
+
+.voice-lab__section + .voice-lab__section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.voice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.voice-list__item {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(15, 26, 21, 0.82);
+  color: var(--text);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.voice-list__item.is-active {
+  border-color: rgba(246, 185, 59, 0.45);
+  background: rgba(246, 185, 59, 0.12);
+}
+
+.voice-editor {
+  margin-top: 16px;
+}
+
+.recording-pill {
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(255, 143, 122, 0.18);
+  color: var(--danger);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .history-item {

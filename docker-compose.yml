@@ -12,6 +12,7 @@ services:
       MODEL_ROOT: /workspace/runtime/models
       OUTPUT_ROOT: /workspace/runtime/output
       JOBS_ROOT: /workspace/runtime/data/jobs
+      VOICE_SAMPLES_ROOT: /workspace/runtime/data/voices
       LOGS_ROOT: /workspace/runtime/logs
     expose:
       - "8000"
@@ -19,6 +20,7 @@ services:
       - ./runtime/models:/workspace/runtime/models
       - ./runtime/output:/workspace/runtime/output
       - ./runtime/data/jobs:/workspace/runtime/data/jobs
+      - ./runtime/data/voices:/workspace/runtime/data/voices
       - ./runtime/logs:/workspace/runtime/logs
     networks:
       - webapp

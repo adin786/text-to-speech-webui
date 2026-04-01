@@ -25,6 +25,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ENV MODEL_ROOT=/workspace/runtime/models \
     OUTPUT_ROOT=/workspace/runtime/output \
     JOBS_ROOT=/workspace/runtime/data/jobs \
+    VOICE_SAMPLES_ROOT=/workspace/runtime/data/voices \
     LOGS_ROOT=/workspace/runtime/logs \
     OFFLINE_MODE=true \
     DEMO_MODE=true \

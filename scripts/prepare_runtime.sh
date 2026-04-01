@@ -25,4 +25,5 @@ EOF
 ensure_writable_dir "$repo_root/runtime/models"
 ensure_writable_dir "$repo_root/runtime/output"
 ensure_writable_dir "$repo_root/runtime/data/jobs"
+ensure_writable_dir "$repo_root/runtime/data/voices"
 ensure_writable_dir "$repo_root/runtime/logs"

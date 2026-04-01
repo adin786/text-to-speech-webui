@@ -5,13 +5,15 @@ from threading import Lock
 
 from app.adapters.tts.base import TTSBackend
 from app.adapters.tts.demo import synthesize_demo_wave
-from app.domain.errors import AvailabilityError, RuntimeFailure
+from app.domain.errors import AvailabilityError, RuntimeFailure, ValidationError
 from app.domain.models import (
     BackendSynthesisOutput,
     ModelId,
     SynthesisJob,
+    SynthesisRequest,
     VoiceDescriptor,
 )
+from app.services.voices import VoiceSampleService
 
 VOICE_OPTIONS = [
     VoiceDescriptor(id="Ryan", display_name="Ryan"),
@@ -25,7 +27,7 @@ VOICE_OPTIONS = [
     VoiceDescriptor(id="Sohee", display_name="Sohee"),
 ]
 
-REQUIRED_PATHS = [
+QWEN_REQUIRED_PATHS = [
     "config.json",
     "generation_config.json",
     "merges.txt",
@@ -39,33 +41,62 @@ REQUIRED_PATHS = [
     "speech_tokenizer/preprocessor_config.json",
 ]
 
+LANGUAGE_NAMES = {
+    "auto": "Auto",
+    "en": "English",
+    "de": "German",
+    "fr": "French",
+    "es": "Spanish",
+    "zh": "Chinese",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "pt": "Portuguese",
+    "it": "Italian",
+    "ru": "Russian",
+}
+
 
 class QwenBackend(TTSBackend):
     model_id = ModelId.QWEN
     display_name = "Qwen3-TTS 0.6B"
     runtime = "cpu"
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(
+        self,
+        *args,
+        voice_sample_service: VoiceSampleService,
+        **kwargs,
+    ) -> None:
         super().__init__(*args, **kwargs)
+        self.voice_sample_service = voice_sample_service
         self._lock = Lock()
-        self._model = None
+        self._custom_voice_model = None
+        self._clone_model = None
 
     def is_enabled(self) -> bool:
         return self.settings.enable_qwen and self.settings.qwen_enabled_in_ui
 
     def is_available(self) -> bool:
-        if self._has_runtime() and self._has_local_assets():
+        if self._has_runtime() and (
+            self._has_custom_voice_assets() or self._has_clone_assets()
+        ):
             return True
         if self.settings.demo_mode:
             return True
         return False
 
     def notes(self) -> str | None:
-        if self._has_runtime() and self._has_local_assets():
-            return "CPU-first local backend using downloaded Qwen3-TTS 0.6B weights."
+        if self._has_runtime():
+            paths = []
+            if self._has_custom_voice_assets():
+                paths.append("named voices ready")
+            if self._has_clone_assets():
+                paths.append("voice cloning ready")
+            if paths:
+                return f"CPU-first local backend with {', '.join(paths)}."
         if self.settings.demo_mode:
             return "Demo synthesis is active until Qwen weights are installed."
-        return "Qwen runtime or model files are missing locally."
+        return "Qwen runtime or one of the required local checkpoints is missing."
 
     def list_languages(self) -> list[str]:
         return ["Auto", "en", "de", "fr", "es", "zh", "ja", "ko", "pt", "it", "ru"]
@@ -73,15 +104,57 @@ class QwenBackend(TTSBackend):
     def list_voices(self) -> list[VoiceDescriptor]:
         return VOICE_OPTIONS
 
+    def validate_request(self, request: SynthesisRequest) -> None:
+        if request.saved_voice_id:
+            self.voice_sample_service.get_sample(request.saved_voice_id)
+            if self._can_fallback_to_demo():
+                return
+            if not self._has_runtime() or not self._has_clone_assets():
+                raise AvailabilityError(
+                    "qwen_voice_clone_unavailable",
+                    "Qwen voice cloning needs the Qwen Base checkpoint downloaded locally.",
+                    status_code=409,
+                )
+            return
+
+        if request.voice and request.voice not in {voice.id for voice in VOICE_OPTIONS}:
+            raise ValidationError(
+                "qwen_voice_invalid",
+                "The selected built-in Qwen voice is not supported.",
+                status_code=400,
+            )
+        if self._can_fallback_to_demo():
+            return
+        if not self._has_runtime() or not self._has_custom_voice_assets():
+            raise AvailabilityError(
+                "qwen_missing_assets",
+                "Qwen custom voice generation needs the CustomVoice checkpoint downloaded locally.",
+                status_code=409,
+            )
+
     def synthesize_to_wav(self, job: SynthesisJob) -> BackendSynthesisOutput:
-        if self._has_runtime() and self._has_local_assets():
-            return self._synthesize_real(job)
+        if job.request.saved_voice_id:
+            if self._has_runtime() and self._has_clone_assets():
+                return self._synthesize_voice_clone(job)
+            if not self.settings.demo_mode:
+                raise AvailabilityError(
+                    "qwen_voice_clone_unavailable",
+                    "Qwen voice cloning needs the Qwen Base checkpoint downloaded locally.",
+                    status_code=409,
+                )
+            return self._synthesize_demo(job, mode="demo_clone")
+
+        if self._has_runtime() and self._has_custom_voice_assets():
+            return self._synthesize_custom_voice(job)
         if not self.settings.demo_mode:
             raise AvailabilityError(
                 "qwen_missing_assets",
-                "Qwen is enabled but the local model files are missing.",
+                "Qwen custom voice generation needs the CustomVoice checkpoint downloaded locally.",
                 status_code=409,
             )
+        return self._synthesize_demo(job, mode="demo")
+
+    def _synthesize_demo(self, job: SynthesisJob, mode: str) -> BackendSynthesisOutput:
         output = self.output_wav_path(job.job_id)
         synthesize_demo_wave(
             text=job.request.text,
@@ -91,10 +164,7 @@ class QwenBackend(TTSBackend):
         )
         return BackendSynthesisOutput(
             wav_path=output,
-            metadata={
-                "backend": "qwen3_0_6b",
-                "mode": "demo" if self.settings.demo_mode else "local",
-            },
+            metadata={"backend": "qwen3_0_6b", "mode": mode},
         )
 
     def _has_runtime(self) -> bool:
@@ -103,43 +173,55 @@ class QwenBackend(TTSBackend):
             for module_name in ("qwen_tts", "soundfile", "torch")
         )
 
-    def _has_local_assets(self) -> bool:
+    def _has_custom_voice_assets(self) -> bool:
         model_dir = self.model_store.model_dir(self.settings.qwen_model_dir_name)
         return all(
-            (model_dir / relative_path).exists() for relative_path in REQUIRED_PATHS
+            (model_dir / relative_path).exists()
+            for relative_path in QWEN_REQUIRED_PATHS
         )
 
-    def _get_model(self):
-        if self._model is None:
-            with self._lock:
-                if self._model is None:
-                    import torch
-                    from qwen_tts import Qwen3TTSModel
+    def _has_clone_assets(self) -> bool:
+        model_dir = self.model_store.model_dir(self.settings.qwen_clone_model_dir_name)
+        return all(
+            (model_dir / relative_path).exists()
+            for relative_path in QWEN_REQUIRED_PATHS
+        )
 
-                    model_dir = self.model_store.model_dir(
-                        self.settings.qwen_model_dir_name
-                    )
-                    self._model = Qwen3TTSModel.from_pretrained(
-                        str(model_dir),
-                        device_map="cpu",
-                        dtype=torch.float32,
-                        local_files_only=True,
-                    )
-        return self._model
+    def _can_fallback_to_demo(self) -> bool:
+        return self.settings.demo_mode
 
-    def _synthesize_real(self, job: SynthesisJob) -> BackendSynthesisOutput:
+    def _load_model(self, kind: str):
+        with self._lock:
+            if kind == "custom" and self._custom_voice_model is None:
+                self._custom_voice_model = self._create_model(
+                    self.settings.qwen_model_dir_name
+                )
+            if kind == "clone" and self._clone_model is None:
+                self._clone_model = self._create_model(
+                    self.settings.qwen_clone_model_dir_name
+                )
+        return self._custom_voice_model if kind == "custom" else self._clone_model
+
+    def _create_model(self, model_dir_name: str):
+        import torch
+        from qwen_tts import Qwen3TTSModel
+
+        model_dir = self.model_store.model_dir(model_dir_name)
+        return Qwen3TTSModel.from_pretrained(
+            str(model_dir),
+            device_map="cpu",
+            dtype=torch.float32,
+            local_files_only=True,
+        )
+
+    def _synthesize_custom_voice(self, job: SynthesisJob) -> BackendSynthesisOutput:
         import soundfile as sf
 
-        model = self._get_model()
+        model = self._load_model("custom")
         output = self.output_wav_path(job.job_id)
         output.parent.mkdir(parents=True, exist_ok=True)
-
         speaker = job.request.voice or VOICE_OPTIONS[0].id
-        language = (
-            "Auto"
-            if not job.request.language or job.request.language.lower() == "auto"
-            else job.request.language
-        )
+        language = self._language_name(job.request.language)
         wavs, sample_rate = model.generate_custom_voice(
             text=job.request.text,
             language=language,
@@ -149,14 +231,56 @@ class QwenBackend(TTSBackend):
             raise RuntimeFailure(
                 "qwen_empty_output", "Qwen did not generate audio.", status_code=500
             )
-        waveform = wavs[0]
-        sf.write(output, waveform, sample_rate)
+        sf.write(output, wavs[0], sample_rate)
         return BackendSynthesisOutput(
             wav_path=output,
             metadata={
                 "backend": "qwen3_0_6b",
-                "mode": "real",
+                "mode": "custom_voice",
                 "voice": speaker,
                 "language": language,
             },
         )
+
+    def _synthesize_voice_clone(self, job: SynthesisJob) -> BackendSynthesisOutput:
+        import soundfile as sf
+
+        sample_id = job.request.saved_voice_id
+        if sample_id is None:
+            raise ValidationError(
+                "qwen_voice_clone_missing",
+                "A saved voice sample is required for voice cloning.",
+                status_code=400,
+            )
+        sample = self.voice_sample_service.get_sample(sample_id)
+        ref_audio = self.voice_sample_service.get_audio_path(sample_id)
+        model = self._load_model("clone")
+        output = self.output_wav_path(job.job_id)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        language = self._language_name(job.request.language)
+        wavs, sample_rate = model.generate_voice_clone(
+            text=job.request.text,
+            language=language,
+            ref_audio=str(ref_audio),
+            ref_text=sample.transcript,
+        )
+        if not wavs:
+            raise RuntimeFailure(
+                "qwen_empty_output", "Qwen did not generate audio.", status_code=500
+            )
+        sf.write(output, wavs[0], sample_rate)
+        return BackendSynthesisOutput(
+            wav_path=output,
+            metadata={
+                "backend": "qwen3_0_6b",
+                "mode": "voice_clone",
+                "saved_voice_id": sample.sample_id,
+                "saved_voice_name": sample.name,
+                "language": language,
+            },
+        )
+
+    def _language_name(self, value: str | None) -> str:
+        if value is None:
+            return "Auto"
+        return LANGUAGE_NAMES.get(value.lower(), value)

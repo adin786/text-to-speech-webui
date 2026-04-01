@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from fastapi.responses import FileResponse
 
 from app.api.schemas import (
@@ -8,6 +8,8 @@ from app.api.schemas import (
     JobCreatedResponse,
     JobStatusResponse,
     ModelsResponse,
+    VoiceSampleResponse,
+    VoiceSampleUpdateRequest,
 )
 from app.core.dependencies import get_container
 from app.domain.errors import AppError
@@ -41,6 +43,72 @@ def config(container=Depends(get_container)) -> ConfigResponse:
 @router.get("/models", response_model=ModelsResponse)
 def models(container=Depends(get_container)) -> ModelsResponse:
     return ModelsResponse(models=container.model_service.list_models())
+
+
+@router.get("/voices", response_model=list[VoiceSampleResponse])
+def list_voice_samples(container=Depends(get_container)) -> list[VoiceSampleResponse]:
+    return [
+        VoiceSampleResponse.from_sample(sample)
+        for sample in container.voice_sample_service.list_samples()
+    ]
+
+
+@router.post("/voices", response_model=VoiceSampleResponse)
+async def create_voice_sample(
+    name: str = Form(...),
+    transcript: str = Form(...),
+    audio: UploadFile = File(...),
+    container=Depends(get_container),
+) -> VoiceSampleResponse:
+    try:
+        sample = container.voice_sample_service.create_sample(
+            name=name,
+            transcript=transcript,
+            audio_bytes=await audio.read(),
+        )
+        return VoiceSampleResponse.from_sample(sample)
+    except AppError as exc:
+        raise_http(exc)
+
+
+@router.patch("/voices/{sample_id}", response_model=VoiceSampleResponse)
+def update_voice_sample(
+    sample_id: str,
+    request: VoiceSampleUpdateRequest,
+    container=Depends(get_container),
+) -> VoiceSampleResponse:
+    try:
+        sample = container.voice_sample_service.update_sample(
+            sample_id=sample_id,
+            name=request.name,
+            transcript=request.transcript,
+        )
+        return VoiceSampleResponse.from_sample(sample)
+    except AppError as exc:
+        raise_http(exc)
+
+
+@router.delete("/voices/{sample_id}", status_code=204)
+def delete_voice_sample(sample_id: str, container=Depends(get_container)) -> Response:
+    try:
+        container.voice_sample_service.delete_sample(sample_id)
+        return Response(status_code=204)
+    except AppError as exc:
+        raise_http(exc)
+
+
+@router.get("/voices/{sample_id}/audio")
+def get_voice_sample_audio(
+    sample_id: str, container=Depends(get_container)
+) -> FileResponse:
+    try:
+        return FileResponse(
+            container.voice_sample_service.get_audio_path(sample_id),
+            media_type="audio/wav",
+            filename=f"{sample_id}.wav",
+        )
+    except AppError as exc:
+        raise_http(exc)
 
 
 @router.get("/jobs")

@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+import io
+import shutil
 import time
 from pathlib import Path
+import wave
 
 import httpx
 import pytest
 
+from app.adapters.audio.ffmpeg import AudioProcessor
 from app.core.config import get_settings
 from app.main import create_app
 
@@ -22,13 +26,40 @@ async def wait_for_completion(client: httpx.AsyncClient, job_id: str) -> dict:
     raise AssertionError("Job did not complete in time.")
 
 
+def sample_wav_bytes() -> bytes:
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as handle:
+        handle.setnchannels(1)
+        handle.setsampwidth(2)
+        handle.setframerate(16000)
+        handle.writeframes(b"\x00\x00" * 16000)
+    return buffer.getvalue()
+
+
 @pytest.fixture(autouse=True)
 def isolated_runtime(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("MODEL_ROOT", str(tmp_path / "models"))
     monkeypatch.setenv("OUTPUT_ROOT", str(tmp_path / "output"))
     monkeypatch.setenv("JOBS_ROOT", str(tmp_path / "jobs"))
+    monkeypatch.setenv("VOICE_SAMPLES_ROOT", str(tmp_path / "voices"))
     monkeypatch.setenv("LOGS_ROOT", str(tmp_path / "logs"))
     monkeypatch.setenv("DEMO_MODE", "true")
+
+    def fake_encode_mp3(self: AudioProcessor, wav_path: Path, mp3_path: Path) -> None:
+        mp3_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(wav_path, mp3_path)
+
+    def fake_normalize_reference_audio(
+        self: AudioProcessor, source_path: Path, wav_path: Path
+    ) -> Path:
+        wav_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source_path, wav_path)
+        return wav_path
+
+    monkeypatch.setattr(AudioProcessor, "encode_mp3", fake_encode_mp3)
+    monkeypatch.setattr(
+        AudioProcessor, "normalize_reference_audio", fake_normalize_reference_audio
+    )
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
@@ -88,6 +119,74 @@ def test_models_endpoint_keeps_qwen_available_in_demo_mode() -> None:
             models = {model["id"]: model for model in response.json()["models"]}
             assert models["kokoro"]["available"] is True
             assert models["qwen3_0_6b"]["available"] is True
+
+    asyncio.run(run())
+
+
+def test_voice_sample_crud_flow() -> None:
+    async def run() -> None:
+        app = create_app()
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
+            create = await client.post(
+                "/api/voices",
+                data={
+                    "name": "Desk mic",
+                    "transcript": "Hello there this is my saved voice sample.",
+                },
+                files={"audio": ("sample.wav", sample_wav_bytes(), "audio/wav")},
+            )
+            assert create.status_code == 200
+            created = create.json()
+            assert created["name"] == "Desk mic"
+            assert created["audio_url"].startswith("/api/voices/")
+
+            listing = await client.get("/api/voices")
+            assert listing.status_code == 200
+            assert len(listing.json()) == 1
+
+            update = await client.patch(
+                f"/api/voices/{created['sample_id']}",
+                json={"name": "Desk mic v2", "transcript": "Updated transcript"},
+            )
+            assert update.status_code == 200
+            assert update.json()["name"] == "Desk mic v2"
+
+            audio = await client.get(update.json()["audio_url"])
+            assert audio.status_code == 200
+            assert audio.headers["content-type"].startswith("audio/wav")
+
+            remove = await client.delete(f"/api/voices/{created['sample_id']}")
+            assert remove.status_code == 204
+
+            listing_after_delete = await client.get("/api/voices")
+            assert listing_after_delete.status_code == 200
+            assert listing_after_delete.json() == []
+
+    asyncio.run(run())
+
+
+def test_qwen_job_with_missing_saved_voice_returns_useful_error() -> None:
+    async def run() -> None:
+        app = create_app()
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
+            response = await client.post(
+                "/api/jobs",
+                json={
+                    "text": "Hello world",
+                    "model": "qwen3_0_6b",
+                    "saved_voice_id": "missing-sample",
+                    "speed": 1.0,
+                    "output_format": "mp3",
+                },
+            )
+            assert response.status_code == 404
+            assert response.json()["detail"]["error_code"] == "voice_sample_not_found"
 
     asyncio.run(run())
 

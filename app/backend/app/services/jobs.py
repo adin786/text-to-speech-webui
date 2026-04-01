@@ -55,7 +55,8 @@ class JobService:
                 "text_too_long",
                 f"Text must be <= {self.config.max_input_length} characters.",
             )
-        self.model_registry.require_backend(request.model)
+        backend = self.model_registry.require_backend(request.model)
+        backend.validate_request(request)
         job = SynthesisJob(request=request)
         self.job_store.save_job(job)
         self.queue.put(job.job_id)

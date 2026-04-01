@@ -4,13 +4,19 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.adapters.audio.ffmpeg import AudioProcessor
-from app.adapters.storage.filesystem import ArtifactStore, JobStore, ModelStore
+from app.adapters.storage.filesystem import (
+    ArtifactStore,
+    JobStore,
+    ModelStore,
+    VoiceSampleStore,
+)
 from app.adapters.tts.kokoro import KokoroBackend
 from app.adapters.tts.qwen import QwenBackend
 from app.core.config import Settings
 from app.domain.models import AppConfig
 from app.services.jobs import JobService
 from app.services.models import ModelRegistryService
+from app.services.voices import VoiceSampleService
 
 
 @dataclass
@@ -18,6 +24,7 @@ class AppContainer:
     config: AppConfig
     job_service: JobService
     model_service: ModelRegistryService
+    voice_sample_service: VoiceSampleService
 
 
 def ensure_runtime_directories(settings: Settings) -> None:
@@ -37,16 +44,25 @@ def build_container(settings: Settings) -> AppContainer:
     model_store = ModelStore(settings.model_root)
     job_store = JobStore(settings.jobs_root)
     artifact_store = ArtifactStore(settings.output_root)
+    voice_sample_store = VoiceSampleStore(settings.voice_samples_root)
+    audio_processor = AudioProcessor(
+        ffmpeg_binary=settings.ffmpeg_binary,
+        preserve_wav=settings.preserve_wav,
+    )
+    voice_sample_service = VoiceSampleService(
+        store=voice_sample_store,
+        audio_processor=audio_processor,
+    )
     model_service = ModelRegistryService(
         config=app_config,
         backends=[
             KokoroBackend(settings=settings, model_store=model_store),
-            QwenBackend(settings=settings, model_store=model_store),
+            QwenBackend(
+                settings=settings,
+                model_store=model_store,
+                voice_sample_service=voice_sample_service,
+            ),
         ],
-    )
-    audio_processor = AudioProcessor(
-        ffmpeg_binary=settings.ffmpeg_binary,
-        preserve_wav=settings.preserve_wav,
     )
     job_service = JobService(
         config=app_config,
@@ -61,4 +77,5 @@ def build_container(settings: Settings) -> AppContainer:
         config=app_config,
         job_service=job_service,
         model_service=model_service,
+        voice_sample_service=voice_sample_service,
     )

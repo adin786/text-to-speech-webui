@@ -22,6 +22,7 @@ class Settings(BaseModel):
     model_root: Path = REPO_ROOT / "runtime/models"
     output_root: Path = REPO_ROOT / "runtime/output"
     jobs_root: Path = REPO_ROOT / "runtime/data/jobs"
+    voice_samples_root: Path = REPO_ROOT / "runtime/data/voices"
     logs_root: Path = REPO_ROOT / "runtime/logs"
     frontend_dist: Path = REPO_ROOT / "app/frontend/dist"
     default_model: str = "kokoro"
@@ -36,6 +37,7 @@ class Settings(BaseModel):
     environment: str = "development"
     demo_mode: bool = True
     qwen_model_dir_name: str = "qwen3_0_6b"
+    qwen_clone_model_dir_name: str = "qwen3_0_6b_base"
     kokoro_model_dir_name: str = "kokoro"
     allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://127.0.0.1:5173", "http://localhost:5173"]
@@ -43,7 +45,13 @@ class Settings(BaseModel):
 
     @property
     def runtime_roots(self) -> list[Path]:
-        return [self.model_root, self.output_root, self.jobs_root, self.logs_root]
+        return [
+            self.model_root,
+            self.output_root,
+            self.jobs_root,
+            self.voice_samples_root,
+            self.logs_root,
+        ]
 
 
 @lru_cache(maxsize=1)
@@ -64,6 +72,12 @@ def get_settings() -> Settings:
         ),
         jobs_root=Path(
             os.getenv("JOBS_ROOT", str(Settings.model_fields["jobs_root"].default))
+        ),
+        voice_samples_root=Path(
+            os.getenv(
+                "VOICE_SAMPLES_ROOT",
+                str(Settings.model_fields["voice_samples_root"].default),
+            )
         ),
         logs_root=Path(
             os.getenv("LOGS_ROOT", str(Settings.model_fields["logs_root"].default))
@@ -107,6 +121,10 @@ def get_settings() -> Settings:
         qwen_model_dir_name=os.getenv(
             "QWEN_MODEL_DIR_NAME",
             Settings.model_fields["qwen_model_dir_name"].default,
+        ),
+        qwen_clone_model_dir_name=os.getenv(
+            "QWEN_CLONE_MODEL_DIR_NAME",
+            Settings.model_fields["qwen_clone_model_dir_name"].default,
         ),
         kokoro_model_dir_name=os.getenv(
             "KOKORO_MODEL_DIR_NAME",

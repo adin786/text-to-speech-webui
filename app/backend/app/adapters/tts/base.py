@@ -10,6 +10,7 @@ from app.domain.models import (
     ModelDescriptor,
     ModelId,
     SynthesisJob,
+    SynthesisRequest,
     VoiceDescriptor,
 )
 
@@ -46,6 +47,9 @@ class TTSBackend(ABC):
     @abstractmethod
     def synthesize_to_wav(self, job: SynthesisJob) -> BackendSynthesisOutput:
         raise NotImplementedError
+
+    def validate_request(self, request: SynthesisRequest) -> None:
+        return None
 
     def describe(self) -> ModelDescriptor:
         return ModelDescriptor(

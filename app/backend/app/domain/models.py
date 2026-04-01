@@ -42,6 +42,16 @@ class VoiceDescriptor(BaseModel):
     display_name: str
 
 
+class VoiceSample(BaseModel):
+    sample_id: str
+    name: str
+    transcript: str
+    duration_seconds: float
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
+    audio_url: str | None = None
+
+
 class ModelDescriptor(BaseModel):
     id: ModelId
     display_name: str
@@ -57,6 +67,7 @@ class SynthesisRequest(BaseModel):
     text: str
     model: ModelId = ModelId.KOKORO
     voice: str | None = None
+    saved_voice_id: str | None = None
     language: str | None = "en"
     speed: float = 1.0
     output_format: str = "mp3"
@@ -68,6 +79,14 @@ class SynthesisRequest(BaseModel):
         if not value or not value.strip():
             raise ValueError("Text is required.")
         return value.strip()
+
+    @field_validator("voice", "saved_voice_id", "title")
+    @classmethod
+    def normalize_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized or None
 
     @field_validator("speed")
     @classmethod

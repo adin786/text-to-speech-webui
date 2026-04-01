@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.domain.models import JobStatus, ModelDescriptor, SynthesisJob
+from app.domain.models import JobStatus, ModelDescriptor, SynthesisJob, VoiceSample
 
 
 class JobCreatedResponse(BaseModel):
@@ -52,3 +52,30 @@ class ConfigResponse(BaseModel):
 
 class ModelsResponse(BaseModel):
     models: list[ModelDescriptor]
+
+
+class VoiceSampleResponse(BaseModel):
+    sample_id: str
+    name: str
+    transcript: str
+    duration_seconds: float
+    created_at: datetime
+    updated_at: datetime
+    audio_url: str
+
+    @classmethod
+    def from_sample(cls, sample: VoiceSample) -> "VoiceSampleResponse":
+        return cls(
+            sample_id=sample.sample_id,
+            name=sample.name,
+            transcript=sample.transcript,
+            duration_seconds=sample.duration_seconds,
+            created_at=sample.created_at,
+            updated_at=sample.updated_at,
+            audio_url=sample.audio_url or f"/api/voices/{sample.sample_id}/audio",
+        )
+
+
+class VoiceSampleUpdateRequest(BaseModel):
+    name: str | None = None
+    transcript: str | None = None
