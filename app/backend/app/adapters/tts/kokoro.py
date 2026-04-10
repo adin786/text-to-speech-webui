@@ -71,13 +71,15 @@ class KokoroBackend(TTSBackend):
             text=job.request.text,
             destination=output,
             base_frequency=210,
-            speed=job.request.speed,
+            speed=job.request.kokoro_speed,
         )
         return BackendSynthesisOutput(
             wav_path=output,
             metadata={
                 "backend": "kokoro",
                 "mode": "demo" if self.settings.demo_mode else "local",
+                "kokoro_speed": job.request.kokoro_speed,
+                "kokoro_split_pattern": job.request.kokoro_split_pattern,
             },
         )
 
@@ -93,7 +95,11 @@ class KokoroBackend(TTSBackend):
 
         chunks = []
         for result in pipeline(
-            job.request.text, voice=voice_pack, speed=job.request.speed, model=model
+            job.request.text,
+            voice=voice_pack,
+            speed=job.request.kokoro_speed,
+            split_pattern=job.request.kokoro_split_pattern,
+            model=model,
         ):
             if result.audio is None:
                 continue
@@ -110,7 +116,13 @@ class KokoroBackend(TTSBackend):
         sf.write(output, waveform, 24_000)
         return BackendSynthesisOutput(
             wav_path=output,
-            metadata={"backend": "kokoro", "mode": "real", "voice": voice},
+            metadata={
+                "backend": "kokoro",
+                "mode": "real",
+                "voice": voice,
+                "kokoro_speed": job.request.kokoro_speed,
+                "kokoro_split_pattern": job.request.kokoro_split_pattern,
+            },
         )
 
     def _has_runtime(self) -> bool:

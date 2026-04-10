@@ -123,6 +123,7 @@ This starts:
 The default Compose stack is CPU-first and uses locally downloaded model files from the `runtime/` directory.
 The backend Dockerfiles use BuildKit cache mounts for `uv`, so repeated image builds can reuse downloaded Python packages.
 The Compose `webapp` network is marked `internal: true`, so containers can talk to each other but cannot reach the public internet at runtime.
+The default backend image also uses a CPU-only Torch install and a multi-stage build to avoid shipping the larger GPU-oriented Python wheel set in the main Kokoro deployment.
 
 ### Runtime offline guarantees
 
@@ -231,3 +232,6 @@ cd app/backend
 uv python install 3.11
 uv sync --python 3.11 --extra kokoro --extra qwen --extra gpu
 ```
+
+That path is not the default deployment target and is intentionally separate from the main Kokoro CPU stack.
+The GPU backend Dockerfile keeps the broader default Python dependency set intact.

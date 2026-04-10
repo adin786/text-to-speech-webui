@@ -110,6 +110,31 @@ textarea {
   gap: 20px;
 }
 
+.layout--single {
+  grid-template-columns: 1fr;
+}
+
+.tab-nav {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tab-button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(15, 26, 21, 0.82);
+  color: var(--text);
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.tab-button.is-active {
+  background: rgba(246, 185, 59, 0.18);
+  border-color: rgba(246, 185, 59, 0.45);
+  color: var(--accent-soft);
+}
+
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -145,6 +170,22 @@ textarea {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+
+.model-settings {
+  grid-column: 1 / -1;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(17, 28, 23, 0.5);
+}
+
+.model-settings__header {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 12px;
 }
 
 textarea,

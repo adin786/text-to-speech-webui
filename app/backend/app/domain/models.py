@@ -70,6 +70,20 @@ class SynthesisRequest(BaseModel):
     saved_voice_id: str | None = None
     language: str | None = "en"
     speed: float = 1.0
+    kokoro_speed: float = 1.0
+    kokoro_split_pattern: str = r"\n+"
+    qwen_non_streaming_mode: bool = True
+    qwen_do_sample: bool = True
+    qwen_top_k: int = 50
+    qwen_top_p: float = 0.95
+    qwen_temperature: float = 0.8
+    qwen_repetition_penalty: float = 1.1
+    qwen_subtalker_do_sample: bool = True
+    qwen_subtalker_top_k: int = 30
+    qwen_subtalker_top_p: float = 0.95
+    qwen_subtalker_temperature: float = 0.8
+    qwen_max_new_tokens: int = 2048
+    qwen_x_vector_only_mode: bool = False
     output_format: str = "mp3"
     title: str | None = None
 
@@ -88,11 +102,52 @@ class SynthesisRequest(BaseModel):
         normalized = value.strip()
         return normalized or None
 
+    @field_validator("kokoro_split_pattern")
+    @classmethod
+    def normalize_kokoro_split_pattern(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Kokoro split pattern is required.")
+        return normalized
+
     @field_validator("speed")
     @classmethod
     def validate_speed(cls, value: float) -> float:
         if value <= 0 or value > 3:
             raise ValueError("Speed must be between 0 and 3.")
+        return value
+
+    @field_validator("kokoro_speed")
+    @classmethod
+    def validate_kokoro_speed(cls, value: float) -> float:
+        if value <= 0 or value > 3:
+            raise ValueError("Kokoro speed must be between 0 and 3.")
+        return value
+
+    @field_validator("qwen_top_k", "qwen_subtalker_top_k", "qwen_max_new_tokens")
+    @classmethod
+    def validate_positive_int_fields(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("Qwen integer parameters must be greater than 0.")
+        return value
+
+    @field_validator(
+        "qwen_top_p",
+        "qwen_subtalker_top_p",
+        "qwen_temperature",
+        "qwen_subtalker_temperature",
+    )
+    @classmethod
+    def validate_positive_float_fields(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError("Qwen float parameters must be greater than 0.")
+        return value
+
+    @field_validator("qwen_repetition_penalty")
+    @classmethod
+    def validate_repetition_penalty(cls, value: float) -> float:
+        if value < 1:
+            raise ValueError("Qwen repetition penalty must be at least 1.")
         return value
 
     @field_validator("output_format")
