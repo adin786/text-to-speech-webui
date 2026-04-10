@@ -122,19 +122,101 @@ This starts:
 
 The default Compose stack is CPU-first and uses locally downloaded model files from the `runtime/` directory.
 The backend Dockerfiles use BuildKit cache mounts for `uv`, so repeated image builds can reuse downloaded Python packages.
+The default backend image also uses a CPU-only Torch install and a multi-stage build to avoid shipping the larger GPU-oriented Python wheel set in the main Kokoro deployment.
 
-## Optional GPU Scaffold
+## Optional GPU setup (ready-to-run)
 
-There is also an optional override file and separate backend Dockerfile reserved for a future GPU-oriented backend path:
+The GPU path uses:
+
+- `app/backend/Dockerfile.gpu` for the backend image
+- `docker-compose.gpu.yml` as a Compose override that requests all host GPUs
+- PyTorch CUDA 12.8 wheels from the `gpu` dependency extra in `app/backend/pyproject.toml`
+
+### 1) Host prerequisites
+
+1. Install an NVIDIA driver on the host and reboot.
+2. Verify the driver sees your GPU:
+
+   ```bash
+   nvidia-smi
+   ```
+
+3. Install Docker Engine and Docker Compose plugin.
+4. Install the NVIDIA Container Toolkit (nvidia runtime) and configure Docker to expose GPUs to containers.
+   - Official install guide: <https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html>
+   - Official Docker runtime guide: <https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/docker-specialized.html>
+
+On Ubuntu, the minimal flow is:
+
+```bash
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+  | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+  | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+  | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+```
+
+5. Confirm Docker can reach the GPU runtime:
+
+```bash
+docker run --rm --gpus all nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04 nvidia-smi
+```
+
+### 2) Prepare local model/runtime directories
+
+```bash
+./scripts/download_kokoro.sh
+./scripts/download_qwen.sh
+```
+
+### 3) Launch the GPU compose stack
+
+Use the base file plus the GPU override:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
 ```
 
-That path is not the default deployment target and is intentionally separate from the main Kokoro CPU stack. For host-side development, the matching dependency split is:
+Run detached:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build -d
+```
+
+Stop the stack:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml down
+```
+
+### 4) Validate GPU visibility inside backend container
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml exec backend nvidia-smi
+```
+
+And verify PyTorch sees CUDA:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml exec backend \
+  uv run --no-sync python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'no-cuda')"
+```
+
+If `torch.cuda.is_available()` is `False`, check driver/runtime installation on the host first, then confirm the compose command includes `-f docker-compose.gpu.yml`.
+
+## Optional GPU Scaffold
+
+For host-side local Python development (outside Docker), the matching dependency split is:
 
 ```bash
 cd app/backend
 uv python install 3.11
 uv sync --python 3.11 --extra kokoro --extra qwen --extra gpu
 ```
+
+That path is not the default deployment target and is intentionally separate from the main Kokoro CPU stack.
+The GPU backend Dockerfile keeps the broader default Python dependency set intact.

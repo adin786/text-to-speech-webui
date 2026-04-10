@@ -6,3 +6,6 @@ services:
     environment:
       ENABLE_QWEN: "true"
       QWEN_ENABLED_IN_UI: "true"
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    gpus: all
