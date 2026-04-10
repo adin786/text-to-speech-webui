@@ -222,10 +222,12 @@ class QwenBackend(TTSBackend):
         output.parent.mkdir(parents=True, exist_ok=True)
         speaker = job.request.voice or VOICE_OPTIONS[0].id
         language = self._language_name(job.request.language)
+        generate_kwargs = self._generation_kwargs(job.request)
         wavs, sample_rate = model.generate_custom_voice(
             text=job.request.text,
             language=language,
             speaker=speaker,
+            **generate_kwargs,
         )
         if not wavs:
             raise RuntimeFailure(
@@ -239,6 +241,7 @@ class QwenBackend(TTSBackend):
                 "mode": "custom_voice",
                 "voice": speaker,
                 "language": language,
+                "qwen_generation": generate_kwargs,
             },
         )
 
@@ -258,11 +261,14 @@ class QwenBackend(TTSBackend):
         output = self.output_wav_path(job.job_id)
         output.parent.mkdir(parents=True, exist_ok=True)
         language = self._language_name(job.request.language)
+        generate_kwargs = self._generation_kwargs(job.request)
         wavs, sample_rate = model.generate_voice_clone(
             text=job.request.text,
             language=language,
             ref_audio=str(ref_audio),
             ref_text=sample.transcript,
+            x_vector_only_mode=job.request.qwen_x_vector_only_mode,
+            **generate_kwargs,
         )
         if not wavs:
             raise RuntimeFailure(
@@ -277,6 +283,10 @@ class QwenBackend(TTSBackend):
                 "saved_voice_id": sample.sample_id,
                 "saved_voice_name": sample.name,
                 "language": language,
+                "qwen_generation": {
+                    **generate_kwargs,
+                    "x_vector_only_mode": job.request.qwen_x_vector_only_mode,
+                },
             },
         )
 
@@ -284,3 +294,18 @@ class QwenBackend(TTSBackend):
         if value is None:
             return "Auto"
         return LANGUAGE_NAMES.get(value.lower(), value)
+
+    def _generation_kwargs(self, request: SynthesisRequest) -> dict[str, int | float | bool]:
+        return {
+            "non_streaming_mode": request.qwen_non_streaming_mode,
+            "do_sample": request.qwen_do_sample,
+            "top_k": request.qwen_top_k,
+            "top_p": request.qwen_top_p,
+            "temperature": request.qwen_temperature,
+            "repetition_penalty": request.qwen_repetition_penalty,
+            "subtalker_dosample": request.qwen_subtalker_do_sample,
+            "subtalker_top_k": request.qwen_subtalker_top_k,
+            "subtalker_top_p": request.qwen_subtalker_top_p,
+            "subtalker_temperature": request.qwen_subtalker_temperature,
+            "max_new_tokens": request.qwen_max_new_tokens,
+        }
