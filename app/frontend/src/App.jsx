@@ -415,6 +415,7 @@ function VoiceLabPanel({
 }
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState("generation");
   const [config, setConfig] = useState(null);
   const [models, setModels] = useState([]);
   const [savedVoices, setSavedVoices] = useState([]);
@@ -670,148 +671,175 @@ export default function App() {
 
   return (
     <AppShell badge={config?.offline_mode ? "Offline mode ready" : "Online mode"}>
-      <main className="layout">
-        <section className="card card--form">
-          <div className="status__header">
-            <h2>Create Speech</h2>
-            <span className="muted">
-              {form.text.length}/{config?.max_input_length ?? 1000}
-            </span>
-          </div>
-          <form onSubmit={handleSubmit}>
-            <div className="field">
-              <label htmlFor="text">Text</label>
-              <textarea
-                id="text"
-                rows="9"
-                value={form.text}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, text: event.target.value }))
-                }
-                placeholder="Type the words you want to hear."
-              />
-            </div>
-            <div className="grid">
-              <ModelSelector
-                models={models}
-                selectedModel={form.model}
-                onChange={(value) =>
-                  setForm((current) => ({ ...current, model: value }))
-                }
-              />
-              {isQwenSelected ? (
-                <VoiceModeSelector mode={voiceMode} onChange={setVoiceMode} />
-              ) : (
-                <VoiceSelector
-                  voices={selectedModel?.voices ?? []}
-                  value={form.voice}
-                  onChange={(value) =>
-                    setForm((current) => ({ ...current, voice: value }))
-                  }
-                />
-              )}
-              {isQwenSelected && voiceMode === "builtin" ? (
-                <VoiceSelector
-                  voices={selectedModel?.voices ?? []}
-                  value={form.voice}
-                  onChange={(value) =>
-                    setForm((current) => ({ ...current, voice: value }))
-                  }
-                />
-              ) : null}
-              {isQwenSelected && voiceMode === "saved" ? (
-                <SavedVoiceSelector
-                  voices={savedVoices}
-                  value={form.saved_voice_id}
-                  onChange={(value) =>
-                    setForm((current) => ({ ...current, saved_voice_id: value }))
-                  }
-                />
-              ) : null}
-              <div className="field">
-                <label htmlFor="language">Language</label>
-                <select
-                  id="language"
-                  value={form.language}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      language: event.target.value,
-                    }))
-                  }
-                >
-                  {(selectedModel?.languages ?? []).map((language) => (
-                    <option key={language} value={language}>
-                      {language}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="speed">Speed</label>
-                <input
-                  id="speed"
-                  type="range"
-                  min="0.5"
-                  max="1.6"
-                  step="0.05"
-                  value={form.speed}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      speed: Number(event.target.value),
-                    }))
-                  }
-                />
-                <span className="muted">{form.speed.toFixed(2)}x</span>
-              </div>
-            </div>
-            {selectedModel?.notes ? <p className="note">{selectedModel.notes}</p> : null}
-            {isQwenSelected && voiceMode === "saved" && savedVoices.length === 0 ? (
-              <p className="note">
-                Save a voice sample in Voice Lab before submitting a Qwen clone job.
-              </p>
-            ) : null}
-            {error ? <p className="error">{error}</p> : null}
-            <button className="primary-button" disabled={isInvalid || submitting}>
-              {submitting ? "Submitting..." : "Generate Speech"}
-            </button>
-          </form>
-        </section>
+      <div className="tab-nav" role="tablist" aria-label="Voice workflow tabs">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "generation"}
+          className={activeTab === "generation" ? "tab-button is-active" : "tab-button"}
+          onClick={() => setActiveTab("generation")}
+        >
+          Voice Generation
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "cloning"}
+          className={activeTab === "cloning" ? "tab-button is-active" : "tab-button"}
+          onClick={() => setActiveTab("cloning")}
+        >
+          Voice Cloning
+        </button>
+      </div>
 
-        <JobStatusPanel job={job} />
-        <HistoryPanel jobs={history} onSelect={handleSelectJob} />
-        <VoiceLabPanel
-          qwenEnabled={qwenEnabled}
-          voices={savedVoices}
-          activeVoiceId={form.saved_voice_id}
-          onSelectVoice={(sampleId) =>
-            setForm((current) => ({ ...current, saved_voice_id: sampleId }))
-          }
-          editor={voiceEditor}
-          onEditorChange={(field, value) =>
-            setVoiceEditor((current) => ({ ...current, [field]: value }))
-          }
-          onSaveEdits={handleSaveVoiceEdits}
-          onDelete={handleDeleteVoice}
-          draft={voiceDraft}
-          onDraftChange={(field, value) =>
-            setVoiceDraft((current) => ({ ...current, [field]: value }))
-          }
-          draftPreviewUrl={draftPreviewUrl}
-          onDraftFileChange={setDraftAudio}
-          onStartRecording={handleStartRecording}
-          onStopRecording={handleStopRecording}
-          recording={isRecording}
-          recordingAvailable={
-            typeof window !== "undefined" &&
-            Boolean(window.MediaRecorder) &&
-            Boolean(navigator.mediaDevices?.getUserMedia)
-          }
-          onSaveDraft={handleSaveVoiceSample}
-          savingDraft={savingVoice}
-        />
-      </main>
+      {activeTab === "generation" ? (
+        <main className="layout">
+          <section className="card card--form">
+            <div className="status__header">
+              <h2>Create Speech</h2>
+              <span className="muted">
+                {form.text.length}/{config?.max_input_length ?? 1000}
+              </span>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="field">
+                <label htmlFor="text">Text</label>
+                <textarea
+                  id="text"
+                  rows="9"
+                  value={form.text}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, text: event.target.value }))
+                  }
+                  placeholder="Type the words you want to hear."
+                />
+              </div>
+              <div className="grid">
+                <ModelSelector
+                  models={models}
+                  selectedModel={form.model}
+                  onChange={(value) =>
+                    setForm((current) => ({ ...current, model: value }))
+                  }
+                />
+                {isQwenSelected ? (
+                  <VoiceModeSelector mode={voiceMode} onChange={setVoiceMode} />
+                ) : (
+                  <VoiceSelector
+                    voices={selectedModel?.voices ?? []}
+                    value={form.voice}
+                    onChange={(value) =>
+                      setForm((current) => ({ ...current, voice: value }))
+                    }
+                  />
+                )}
+                {isQwenSelected && voiceMode === "builtin" ? (
+                  <VoiceSelector
+                    voices={selectedModel?.voices ?? []}
+                    value={form.voice}
+                    onChange={(value) =>
+                      setForm((current) => ({ ...current, voice: value }))
+                    }
+                  />
+                ) : null}
+                {isQwenSelected && voiceMode === "saved" ? (
+                  <SavedVoiceSelector
+                    voices={savedVoices}
+                    value={form.saved_voice_id}
+                    onChange={(value) =>
+                      setForm((current) => ({ ...current, saved_voice_id: value }))
+                    }
+                  />
+                ) : null}
+                <div className="field">
+                  <label htmlFor="language">Language</label>
+                  <select
+                    id="language"
+                    value={form.language}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        language: event.target.value,
+                      }))
+                    }
+                  >
+                    {(selectedModel?.languages ?? []).map((language) => (
+                      <option key={language} value={language}>
+                        {language}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label htmlFor="speed">Speed</label>
+                  <input
+                    id="speed"
+                    type="range"
+                    min="0.5"
+                    max="1.6"
+                    step="0.05"
+                    value={form.speed}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        speed: Number(event.target.value),
+                      }))
+                    }
+                  />
+                  <span className="muted">{form.speed.toFixed(2)}x</span>
+                </div>
+              </div>
+              {selectedModel?.notes ? <p className="note">{selectedModel.notes}</p> : null}
+              {isQwenSelected && voiceMode === "saved" && savedVoices.length === 0 ? (
+                <p className="note">
+                  Save a voice sample in the Voice Cloning tab before submitting a Qwen
+                  clone job.
+                </p>
+              ) : null}
+              {error ? <p className="error">{error}</p> : null}
+              <button className="primary-button" disabled={isInvalid || submitting}>
+                {submitting ? "Submitting..." : "Generate Speech"}
+              </button>
+            </form>
+          </section>
+
+          <JobStatusPanel job={job} />
+          <HistoryPanel jobs={history} onSelect={handleSelectJob} />
+        </main>
+      ) : (
+        <main className="layout layout--single">
+          <VoiceLabPanel
+            qwenEnabled={qwenEnabled}
+            voices={savedVoices}
+            activeVoiceId={form.saved_voice_id}
+            onSelectVoice={(sampleId) =>
+              setForm((current) => ({ ...current, saved_voice_id: sampleId }))
+            }
+            editor={voiceEditor}
+            onEditorChange={(field, value) =>
+              setVoiceEditor((current) => ({ ...current, [field]: value }))
+            }
+            onSaveEdits={handleSaveVoiceEdits}
+            onDelete={handleDeleteVoice}
+            draft={voiceDraft}
+            onDraftChange={(field, value) =>
+              setVoiceDraft((current) => ({ ...current, [field]: value }))
+            }
+            draftPreviewUrl={draftPreviewUrl}
+            onDraftFileChange={setDraftAudio}
+            onStartRecording={handleStartRecording}
+            onStopRecording={handleStopRecording}
+            recording={isRecording}
+            recordingAvailable={
+              typeof window !== "undefined" &&
+              Boolean(window.MediaRecorder) &&
+              Boolean(navigator.mediaDevices?.getUserMedia)
+            }
+            onSaveDraft={handleSaveVoiceSample}
+            savingDraft={savingVoice}
+          />
+        </main>
+      )}
     </AppShell>
   );
 }
