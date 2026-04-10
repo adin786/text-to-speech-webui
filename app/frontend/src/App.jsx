@@ -26,6 +26,24 @@ const defaultVoiceDraft = {
   transcript: "",
 };
 
+const sampleVoiceScripts = [
+  {
+    id: "warm_conversational",
+    label: "Warm conversational (~20s)",
+    text: "Good morning. Thanks for helping with this voice sample today. I speak clearly, keep a steady pace, and finish each sentence naturally so the model can learn my tone, rhythm, and pronunciation.",
+  },
+  {
+    id: "bright_expressive",
+    label: "Bright expressive (~22s)",
+    text: "On Saturday afternoon, I packed peaches, parsley, and sparkling water for a picnic by the lake. The breeze felt light, the clouds drifted slowly, and everyone laughed as the sun slipped behind the trees.",
+  },
+  {
+    id: "clear_articulation",
+    label: "Clear articulation (~25s)",
+    text: "Please record this paragraph in one smooth take. Keep your voice natural, pronounce consonants crisply, and vary your pitch slightly between statements and questions. This gives the clone a balanced, reliable reference.",
+  },
+];
+
 function usePollingJob(jobId, onUpdate, onError) {
   useEffect(() => {
     if (!jobId) {
@@ -239,6 +257,7 @@ function VoiceLabPanel({
 }) {
   const selectedVoice =
     voices.find((voice) => voice.sample_id === activeVoiceId) ?? null;
+  const [selectedScriptId, setSelectedScriptId] = useState(sampleVoiceScripts[0].id);
 
   return (
     <section className="card">
@@ -284,6 +303,33 @@ function VoiceLabPanel({
         </div>
         <div className="field">
           <label htmlFor="voice-sample-transcript">Exact Transcript</label>
+          <div className="sample-script-picker">
+            <select
+              aria-label="Sample reading script"
+              value={selectedScriptId}
+              onChange={(event) => setSelectedScriptId(event.target.value)}
+            >
+              {sampleVoiceScripts.map((script) => (
+                <option key={script.id} value={script.id}>
+                  {script.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                const script = sampleVoiceScripts.find(
+                  (sampleScript) => sampleScript.id === selectedScriptId,
+                );
+                if (script) {
+                  onDraftChange("transcript", script.text);
+                }
+              }}
+            >
+              Load sample text
+            </button>
+          </div>
           <textarea
             id="voice-sample-transcript"
             rows="4"
@@ -291,6 +337,9 @@ function VoiceLabPanel({
             onChange={(event) => onDraftChange("transcript", event.target.value)}
             placeholder="Type exactly what you say in the recording."
           />
+          <p className="muted">
+            Pick a script with varied sounds, then read it exactly as written.
+          </p>
         </div>
         <div className="voice-actions">
           {recordingAvailable ? (

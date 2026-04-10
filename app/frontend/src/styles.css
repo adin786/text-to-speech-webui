@@ -382,6 +382,16 @@ label {
   letter-spacing: 0.08em;
 }
 
+.sample-script-picker {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sample-script-picker select {
+  flex: 1;
+}
+
 .history-item {
   border: 1px solid var(--line);
   border-radius: 18px;
