@@ -59,8 +59,11 @@ class JobStore:
             key=lambda item: item.stat().st_mtime,
             reverse=True,
         ):
-            payload = json.loads(path.read_text(encoding="utf-8"))
-            jobs.append(SynthesisJob.model_validate(payload))
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                jobs.append(SynthesisJob.model_validate(payload))
+            except (OSError, json.JSONDecodeError, ValueError):
+                continue
         return jobs[:limit]
 
 

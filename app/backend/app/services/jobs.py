@@ -3,12 +3,13 @@ from __future__ import annotations
 import logging
 import threading
 from pathlib import Path
-from queue import Queue
+from queue import Empty, Queue
+from typing import Callable
 
 from app.adapters.audio.ffmpeg import AudioProcessor
 from app.adapters.storage.filesystem import ArtifactStore, JobStore
 from app.core.config import Settings
-from app.domain.errors import AppError, NotFoundError, ValidationError
+from app.domain.errors import AppError, NotFoundError, RuntimeFailure, ValidationError
 from app.domain.models import (
     AppConfig,
     AudioArtifact,
@@ -46,6 +47,7 @@ class JobService:
 
     def start(self) -> None:
         if not self.started:
+            self._recover_incomplete_jobs()
             self.worker.start()
             self.started = True
 
@@ -107,6 +109,25 @@ class JobService:
             finally:
                 self.queue.task_done()
 
+    def _recover_incomplete_jobs(self) -> None:
+        for job in self.job_store.list_jobs(limit=10_000):
+            if job.status == JobStatus.QUEUED:
+                job.transition(JobStatus.QUEUED, "Re-queued after backend restart")
+                self.job_store.save_job(job)
+                self.queue.put(job.job_id)
+                continue
+
+            if job.status in {
+                JobStatus.VALIDATING,
+                JobStatus.RUNNING,
+                JobStatus.POST_PROCESSING,
+            }:
+                job.fail(
+                    "job_interrupted",
+                    "Job was interrupted by a backend restart.",
+                )
+                self.job_store.save_job(job)
+
     def _process_job(self, job_id: str) -> None:
         job = self.get_job(job_id)
         try:
@@ -117,7 +138,14 @@ class JobService:
                 JobStatus.RUNNING, f"Generating audio with {job.request.model.value}"
             )
             self.job_store.save_job(job)
-            wav_output = backend.synthesize_to_wav(job)
+            timeout_seconds = (
+                job.request.timeout_seconds or self.config.job_timeout_seconds
+            )
+            wav_output = self._run_synthesis_with_timeout(
+                job=job,
+                timeout_seconds=timeout_seconds,
+                target=lambda: backend.synthesize_to_wav(job),
+            )
             job.transition(JobStatus.POST_PROCESSING, "Encoding MP3")
             self.job_store.save_job(job)
             result = self._finalize_artifacts(job, wav_output)
@@ -163,3 +191,42 @@ class JobService:
         if not self.settings.preserve_wav and wav_path.exists():
             wav_path.unlink(missing_ok=True)
         return SynthesisResult(artifact=artifact, metadata=backend_output.metadata)
+
+    def _run_synthesis_with_timeout(
+        self,
+        job: SynthesisJob,
+        timeout_seconds: int,
+        target: Callable[[], BackendSynthesisOutput],
+    ) -> BackendSynthesisOutput:
+        result_queue: Queue[tuple[str, object]] = Queue(maxsize=1)
+
+        def runner() -> None:
+            try:
+                result_queue.put(("result", target()))
+            except Exception as exc:  # pragma: no cover
+                result_queue.put(("error", exc))
+
+        worker = threading.Thread(
+            target=runner,
+            name=f"synthesis-{job.job_id}",
+            daemon=True,
+        )
+        worker.start()
+
+        try:
+            kind, payload = result_queue.get(timeout=timeout_seconds)
+        except Empty as exc:
+            raise RuntimeFailure(
+                "job_timeout",
+                (
+                    f"Speech generation exceeded the timeout of "
+                    f"{timeout_seconds} seconds."
+                ),
+                status_code=504,
+            ) from exc
+
+        if kind == "error":
+            if isinstance(payload, Exception):
+                raise payload
+            raise payload
+        return payload

@@ -11,6 +11,10 @@ import httpx
 import pytest
 
 from app.adapters.audio.ffmpeg import AudioProcessor
+from app.adapters.storage.filesystem import JobStore
+from app.adapters.tts.kokoro import KokoroBackend
+from app.domain.errors import RuntimeFailure
+from app.domain.models import JobStatus, SynthesisJob, SynthesisRequest
 from app.core.config import get_settings
 from app.main import create_app
 
@@ -79,6 +83,20 @@ def test_health_endpoint() -> None:
     asyncio.run(run())
 
 
+def test_config_endpoint_exposes_default_job_timeout() -> None:
+    async def run() -> None:
+        app = create_app()
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
+            response = await client.get("/api/config")
+            assert response.status_code == 200
+            assert response.json()["job_timeout_seconds"] == 120
+
+    asyncio.run(run())
+
+
 def test_job_generation_flow() -> None:
     async def run() -> None:
         app = create_app()
@@ -119,6 +137,91 @@ def test_models_endpoint_keeps_qwen_available_in_demo_mode() -> None:
             models = {model["id"]: model for model in response.json()["models"]}
             assert models["kokoro"]["available"] is True
             assert models["qwen3_0_6b"]["available"] is True
+
+    asyncio.run(run())
+
+
+def test_job_fails_when_synthesis_exceeds_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def slow_synthesize(self, job):  # noqa: ANN001, ANN202
+        time.sleep(2)
+        raise RuntimeFailure("should_not_finish", "Timed out job should not complete.")
+
+    monkeypatch.setattr(KokoroBackend, "synthesize_to_wav", slow_synthesize)
+
+    async def run() -> None:
+        app = create_app()
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
+            create = await client.post(
+                "/api/jobs",
+                json={
+                    "text": "Hello world",
+                    "model": "kokoro",
+                    "speed": 1.0,
+                    "timeout_seconds": 1,
+                    "output_format": "mp3",
+                },
+            )
+            assert create.status_code == 200
+            payload = create.json()
+            result = await wait_for_completion(client, payload["job_id"])
+            assert result["status"] == "failed"
+            assert result["error_code"] == "job_timeout"
+            assert "timeout" in result["error_message"].lower()
+
+    try:
+        asyncio.run(run())
+    finally:
+        time.sleep(2.1)
+
+
+def test_startup_recovers_incomplete_jobs() -> None:
+    settings = get_settings()
+    store = JobStore(settings.jobs_root)
+
+    running_job = SynthesisJob(
+        request=SynthesisRequest(text="stuck", model="kokoro"),
+        status=JobStatus.RUNNING,
+        progress_message="Generating audio with kokoro",
+    )
+    queued_job = SynthesisJob(
+        request=SynthesisRequest(text="queued", model="kokoro"),
+        status=JobStatus.QUEUED,
+        progress_message="Queued",
+    )
+    store.save_job(running_job)
+    store.save_job(queued_job)
+
+    app = create_app()
+    transport = httpx.ASGITransport(app=app)
+
+    async def run() -> None:
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
+            running = await client.get(f"/api/jobs/{running_job.job_id}")
+            queued = await client.get(f"/api/jobs/{queued_job.job_id}")
+
+            assert running.status_code == 200
+            assert queued.status_code == 200
+
+            running_payload = running.json()
+            queued_payload = queued.json()
+
+            assert running_payload["status"] == "failed"
+            assert running_payload["error_code"] == "job_interrupted"
+            assert "backend restart" in running_payload["error_message"].lower()
+
+            assert queued_payload["status"] in {
+                "queued",
+                "validating",
+                "running",
+                "completed",
+            }
 
     asyncio.run(run())
 

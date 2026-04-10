@@ -37,6 +37,7 @@ def config(container=Depends(get_container)) -> ConfigResponse:
         offline_mode=container.config.offline_mode,
         default_model=container.config.default_model,
         max_input_length=container.config.max_input_length,
+        job_timeout_seconds=container.config.job_timeout_seconds,
     )
 
 

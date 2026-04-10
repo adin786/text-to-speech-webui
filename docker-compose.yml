@@ -36,11 +36,10 @@ services:
     depends_on:
       - backend
     ports:
-      - "127.0.0.1:3000:80"
+      - "3000:80"
     networks:
       - webapp
 
 networks:
   webapp:
     driver: bridge
-    internal: true

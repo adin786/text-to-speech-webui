@@ -52,6 +52,7 @@ def build_container(settings: Settings) -> AppContainer:
         default_model=settings.default_model,
         max_input_length=settings.max_input_length,
         keep_history_limit=settings.keep_history_limit,
+        job_timeout_seconds=settings.job_timeout_seconds,
     )
     model_store = ModelStore(settings.model_root)
     job_store = JobStore(settings.jobs_root)

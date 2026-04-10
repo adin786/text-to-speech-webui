@@ -35,6 +35,7 @@ class AppConfig(BaseModel):
     default_model: str
     max_input_length: int
     keep_history_limit: int
+    job_timeout_seconds: int
 
 
 class VoiceDescriptor(BaseModel):
@@ -70,6 +71,7 @@ class SynthesisRequest(BaseModel):
     saved_voice_id: str | None = None
     language: str | None = "en"
     speed: float = 1.0
+    timeout_seconds: int | None = None
     kokoro_speed: float = 1.0
     kokoro_split_pattern: str = r"\n+"
     qwen_non_streaming_mode: bool = True
@@ -115,6 +117,15 @@ class SynthesisRequest(BaseModel):
     def validate_speed(cls, value: float) -> float:
         if value <= 0 or value > 3:
             raise ValueError("Speed must be between 0 and 3.")
+        return value
+
+    @field_validator("timeout_seconds")
+    @classmethod
+    def validate_timeout_seconds(cls, value: int | None) -> int | None:
+        if value is None:
+            return None
+        if value <= 0 or value > 3600:
+            raise ValueError("Timeout must be between 1 and 3600 seconds.")
         return value
 
     @field_validator("kokoro_speed")

@@ -48,6 +48,7 @@ class ConfigResponse(BaseModel):
     offline_mode: bool
     default_model: str
     max_input_length: int
+    job_timeout_seconds: int
 
 
 class ModelsResponse(BaseModel):

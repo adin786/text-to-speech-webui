@@ -18,6 +18,7 @@ const defaultForm = {
   saved_voice_id: "",
   language: "en",
   speed: 1,
+  timeout_seconds: 120,
   kokoro_speed: 1,
   kokoro_split_pattern: "\\n+",
   qwen_non_streaming_mode: true,
@@ -528,6 +529,7 @@ export default function App() {
           model: defaultModel,
           voice: defaultVoice,
           saved_voice_id: voiceSamples[0]?.sample_id ?? "",
+          timeout_seconds: configResponse.job_timeout_seconds,
         }));
       } catch (nextError) {
         setError(nextError.message);
@@ -837,6 +839,28 @@ export default function App() {
                   <div className="model-settings">
                     <div className="model-settings__header">
                       {selectedModel.display_name} inference settings
+                    </div>
+                    <div className="field">
+                      <label htmlFor="timeout-seconds">
+                        Generation Timeout (seconds)
+                      </label>
+                      <input
+                        id="timeout-seconds"
+                        type="number"
+                        min="1"
+                        max="3600"
+                        step="1"
+                        value={form.timeout_seconds}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            timeout_seconds: Number(event.target.value),
+                          }))
+                        }
+                      />
+                      <span className="muted">
+                        Default: {config?.job_timeout_seconds ?? 120}s
+                      </span>
                     </div>
                     {isQwenSelected ? (
                       <>
