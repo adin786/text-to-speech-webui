@@ -122,6 +122,21 @@ This starts:
 
 The default Compose stack is CPU-first and uses locally downloaded model files from the `runtime/` directory.
 The backend Dockerfiles use BuildKit cache mounts for `uv`, so repeated image builds can reuse downloaded Python packages.
+The Compose `webapp` network is marked `internal: true`, so containers can talk to each other but cannot reach the public internet at runtime.
+
+### Runtime offline guarantees
+
+- Qwen inference is loaded from local paths only via `Qwen3TTSModel.from_pretrained(..., local_files_only=True)`.
+- The backend enables strict offline guards in `OFFLINE_MODE=true` runs (`HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`, `HF_DATASETS_OFFLINE=1`).
+- Frontend API traffic is limited to `/api` on the local Compose stack.
+
+To verify egress is blocked after startup:
+
+```bash
+docker compose exec backend python -c "import socket; socket.gethostbyname('huggingface.co')"
+```
+
+That command should fail in the running container because `internal: true` blocks outbound DNS/internet access.
 
 ## Optional GPU setup (ready-to-run)
 

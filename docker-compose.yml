@@ -6,6 +6,10 @@ services:
     environment:
       APP_TITLE: Text to Speech WebUI
       OFFLINE_MODE: "true"
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      HF_DATASETS_OFFLINE: "1"
+      NO_TELEMETRY: "1"
       DEMO_MODE: "false"
       ENABLE_QWEN: "true"
       QWEN_ENABLED_IN_UI: "true"
@@ -39,3 +43,4 @@ services:
 networks:
   webapp:
     driver: bridge
+    internal: true
