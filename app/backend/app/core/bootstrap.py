@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
 
 from app.adapters.audio.ffmpeg import AudioProcessor
@@ -27,12 +28,23 @@ class AppContainer:
     voice_sample_service: VoiceSampleService
 
 
+def apply_offline_runtime_guards(settings: Settings) -> None:
+    if not settings.offline_mode:
+        return
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
+    os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+    os.environ.setdefault("HF_DATASETS_OFFLINE", "1")
+    os.environ.setdefault("DO_NOT_TRACK", "1")
+    os.environ.setdefault("NO_TELEMETRY", "1")
+
+
 def ensure_runtime_directories(settings: Settings) -> None:
     for root in settings.runtime_roots:
         Path(root).mkdir(parents=True, exist_ok=True)
 
 
 def build_container(settings: Settings) -> AppContainer:
+    apply_offline_runtime_guards(settings)
     ensure_runtime_directories(settings)
     app_config = AppConfig(
         app_title=settings.app_title,
