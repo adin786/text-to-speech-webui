@@ -38,17 +38,19 @@ class KokoroBackend(TTSBackend):
         return self.settings.enable_kokoro
 
     def is_available(self) -> bool:
-        if self._has_runtime() and self._has_local_assets():
+        if self._has_runtime() and self._has_local_assets() and self._has_g2p_assets():
             return True
         if self.settings.demo_mode:
             return True
         return False
 
     def notes(self) -> str | None:
-        if self._has_runtime() and self._has_local_assets():
+        if self._has_runtime() and self._has_local_assets() and self._has_g2p_assets():
             return "CPU-first local backend using downloaded Kokoro weights."
         if self.settings.demo_mode:
             return "Demo synthesis is active until Kokoro weights are installed."
+        if not self._has_g2p_assets():
+            return "Kokoro English G2P assets are missing locally."
         return "Kokoro runtime or model files are missing locally."
 
     def list_languages(self) -> list[str]:
@@ -130,6 +132,9 @@ class KokoroBackend(TTSBackend):
             importlib.util.find_spec(module_name) is not None
             for module_name in ("kokoro", "soundfile", "torch")
         )
+
+    def _has_g2p_assets(self) -> bool:
+        return importlib.util.find_spec("en_core_web_sm") is not None
 
     def _has_local_assets(self) -> bool:
         model_dir = self.model_store.model_dir(self.settings.kokoro_model_dir_name)

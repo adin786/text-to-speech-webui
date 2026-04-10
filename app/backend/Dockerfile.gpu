@@ -33,6 +33,7 @@ COPY app/backend ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable \
     --extra kokoro --extra qwen --extra gpu --python 3.11
+RUN .venv/bin/python -m spacy download en_core_web_sm
 
 FROM nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04 AS runtime
 

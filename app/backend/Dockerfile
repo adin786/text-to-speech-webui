@@ -23,6 +23,7 @@ COPY app/backend ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable \
     --extra kokoro --extra qwen --extra cpu
+RUN .venv/bin/python -m spacy download en_core_web_sm
 
 FROM python:3.11-slim AS runtime
 
